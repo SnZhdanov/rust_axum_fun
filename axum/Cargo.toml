@@ -1,0 +1,23 @@
+[package]
+name = "axum"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio = { version = "1.35.0", features = ["full"] }
+async-trait = "0.1.58"
+
+serde = "1.0.193"
+serde_json = "1.0.108"
+
+axum = "0.7.2"
+
+chrono = {version="0.4.31", features = ["serde"]}
+
+percent-encoding = "2.2.0"
+
+[dependencies.mongodb]
+version = "2.8.0"
+features = ["tokio-runtime", "aws-auth", "bson-chrono-0_4", "bson-serde_with"]
