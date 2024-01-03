@@ -13,8 +13,10 @@ pub struct Table{
 pub struct Order{
     pub order_id: u64,
     pub table_id: u64,
+    #[serde(with= "chrono_datetime_as_bson_datetime")]
+    pub order_time: DateTime<Utc>,
+    pub cook_status: CookStatus,
     pub item: Item,
-    pub cook_status: CookStatus
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -40,8 +42,9 @@ pub struct TableResponse{
 pub struct OrderResponse{
     pub order_id: u64,
     pub table_id: u64,
+    pub order_time: DateTime<Utc>,
+    pub cook_status: CookStatus,
     pub item: ItemResponse,
-    pub cook_status: CookStatus
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -69,15 +72,17 @@ impl From<Order> for OrderResponse{
         let Order { 
             order_id, 
             table_id, 
-            item, 
+            order_time,
             cook_status,
+            item, 
             .. 
         } = order;
         Self { 
             order_id, 
-            table_id, 
-            item: item.into(), 
-            cook_status
+            table_id,
+            order_time,  
+            cook_status,
+            item: item.into(),
         }
     }
 }
