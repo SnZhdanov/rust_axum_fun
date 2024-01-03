@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 tokio = { version = "1.35.0", features = ["full"] }
+
 async-trait = "0.1.58"
 
 serde = "1.0.193"
@@ -17,6 +18,12 @@ axum = "0.7.2"
 chrono = {version="0.4.31", features = ["serde"]}
 
 percent-encoding = "2.2.0"
+
+tracing = { version = "0.1", features = ["log"] }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt"] }
+
+reqwest = { version = "0.11", features = ["json"] }
+openssl = { version = "0.10", features = ["vendored"] }
 
 [dependencies.mongodb]
 version = "2.8.0"
