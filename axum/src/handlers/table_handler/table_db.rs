@@ -1,32 +1,23 @@
 use async_trait::async_trait;
-use chrono::offset;
+use mongodb::bson::doc;
 use mongodb::bson::Document;
-use mongodb::{bson::doc, options::UpdateOptions};
 use serde::{Deserialize, Serialize};
 //use futures::TryStreamExt;
 use std::error::Error;
 
 use crate::common::database;
-use crate::common::database_helpers::{collect_cursor, CollectCusrorResult};
+use crate::common::database_helpers::collect_cursor;
 use crate::common::models::pagination_schema::Pagination;
 use crate::common::models::restaurant_schema::{Table, TableResponse};
+use crate::common::models::sort_schema::SortDirectionBsonEnum;
 use crate::common::models::sort_schema::SortDirectionEnum;
-pub struct ListTableSort {
-    sort_by: ListTableSortByEnum,
-    sort_direction: SortDirectionEnum,
-}
+
 #[derive(Serialize, Deserialize)]
 pub struct ListTablesResult {
     pub tables: Vec<TableResponse>,
     pub failed_tables: Option<Vec<String>>,
     pub count: u64,
     pub dropped: u64,
-}
-
-pub enum ListTableSortByEnum {
-    TableId,
-    OrderId,
-    OrderAmount,
 }
 
 #[async_trait]
@@ -36,7 +27,6 @@ pub trait DBTableTrait {
     async fn list_tables(
         &self,
         pagination: &Pagination,
-        sorts: &Option<ListTableSort>,
     ) -> Result<ListTablesResult, Box<dyn Error>>;
     async fn delete_table(&self, table_id: i64) -> Result<TableResponse, Box<dyn Error>>;
 }
@@ -96,10 +86,10 @@ impl DBTableTrait for database::DB {
             }
         }
     }
+
     async fn list_tables(
         &self,
         pagination: &Pagination,
-        sorts: &Option<ListTableSort>,
     ) -> Result<ListTablesResult, Box<dyn Error>> {
         let table_collection = self
             .db

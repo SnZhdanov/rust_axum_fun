@@ -10,7 +10,19 @@ So the whole goal of this assignment was to explore more of the my weak spots wh
 git clone git@github.com:SnZhdanov/rust_axum_fun.git
 cp .sample_env .env
 ```
+fill out the env variables, username and password for the database can be something like admin/password
 
+```
+#/.env
+MONGO_INITDB_ROOT_USERNAME=admin
+MONGO_INITDB_ROOT_PASSWORD=password
+```
+Once the environment is set, docker compose and then cargo run
+```
+docker-compose up mongo
+cd axum/src/
+cargo run
+```
 
 # Technical Challenges
 So normally in MongoDB, you have `ObjectIds` which act as a unique ID for database indexing. The problem with `ObjectId` is they look like this `659633cd5d59de8dca135ef5` which is kind of a pain for writing in Curls when this is meant for testing purposes and not an actual production environment. So for the sake of simplifying interacting with the database, I utilized an Arc Mutex to keep track of table ids that just increment from 1..N on creation request. This way instead of writing a curl like this
@@ -27,43 +39,43 @@ Again, if this were a real production environment and I were using MongoDB, I wo
 
 
 # TODO
-- Mongodb setup[x]
-    - dockerize mongodb [x] 
-- Axum setup[]
-    - dockerize axum[]
-    - dockerize rust[]
-- Crud for Tables[]
-    - create[x]
-        - idpotent[x]
-        - insert[x]
-    - get[x]
-    - list[]
-        - sort[]
-        - pagination[x]
-    - delete[x]
-    - update???[]
-- Crud for Orders[]
-    - create[]
-    - get[]
-    - list[]
-    - delete[]
-    - update????[]
+- [x] Mongodb setup
+    - [x] dockerize mongodb  
+- [] Axum setup
+    - [] dockerize axum
+    - [] dockerize rust
+- [] Crud for Tables
+    - [x] create
+        - [x] idpotent
+        - [x] insert
+    - [x] get
+    - [x] list
+        - [] sort -- STRETCH
+        - [x] pagination
+    - [x]delete
+    - [] update??? -- STRETCH
+- [] Crud for Orders
+    - [] create
+    - [] get
+    - [] list
+    - [] delete
+    - [] update????  -- STRETCH
 - Error Handling
-    - Tables[]
-    - Orders
+    - [] Tables
+    - [] Orders
 - Unit Tests
     - Tables
-        - handlers[]
-        - db impls[]
+        - [] handlers
+        - [] db impls
     - Orders
-        - handlers[]
-        - db impls[]
-- Integration Tests???[]
+        - [] handlers
+        - [] db impls
+- [] Integration Tests???  -- STRETCH
     - Tables
-        - handlers[]
-        - db impls[]
+        - [] handlers
+        - [] db impls
     - Orders
-        - handlers[]
-        - db impls[]
+        - [] handlers
+        - [] db impls
 - Live Testing
-    - todo[]
+    - [] todo

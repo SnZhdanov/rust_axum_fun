@@ -1,24 +1,20 @@
 use std::sync::Arc;
 
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-//use futures::TryStreamExt;
 
 use axum::{
     extract::Path, extract::Query, extract::State, http::StatusCode, response::IntoResponse, Json,
 };
-use serde_json::json;
-use tokio::sync::Mutex;
 
 use crate::{
     common::models::{
         pagination_schema::Pagination,
-        restaurant_schema::{Order, Table, TableResponse},
+        restaurant_schema::{Table, TableResponse},
     },
     AppState,
 };
 
-use super::table_db::{DBTableTrait, ListTablesResult};
+use super::table_db::DBTableTrait;
 
 #[derive(Deserialize, Serialize)]
 struct PostTableResponse {
@@ -86,7 +82,7 @@ pub async fn list_table(
         offset: pagination.offset,
     };
 
-    match db.list_tables(&pagination, &None).await {
+    match db.list_tables(&pagination).await {
         Ok(list_result) => (
             StatusCode::OK,
             Json(ListTableResponse {
