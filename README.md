@@ -50,23 +50,26 @@ Again, if this were a real production environment and I were using MongoDB, I wo
         - [x] insert
     - [x] get
     - [x] list
-        - [] filter
+        - [x] filter
+            - [x] no filters
             - [x] table_id
             - [x] order_id
             - [x] item_name fuzzy check
             - [x] list of item_names
-        - [] sort -- STRETCH
+            - [] order status -- STRETCH
         - [x] pagination
+        - [] sort -- STRETCH
     - [x]delete
     - [] update -- STRETCH
 - [] Crud for Orders
     - [x] create
     - [x] get
-    - [] list
-        - [] filter
-            - [] ordered_time
-            - [] item_name
-            - [] item_names
+    - [x] list
+        - [x] filters
+            - [x] no filters
+            - [x] item_names
+            - [x] order status
+        - [x] pagination    
         - [] sort -- STRETCH
     - [x] delete
     - [] update  -- STRETCH

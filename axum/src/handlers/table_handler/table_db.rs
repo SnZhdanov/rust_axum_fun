@@ -69,20 +69,19 @@ impl From<ListTableFiltersRequest> for ListTableFiltersBson {
                 }),
                 None => None,
             },
-            item_names_strict: match filters.item_names.is_empty(){
+            item_names_strict: match filters.item_names.is_empty() {
                 true => None,
-                false => {
-                    Some(
-                        filters.item_names
-                            .clone()
-                            .into_iter()
-                            .map(|item_name| ItemNameStrictCheck {
-                                item_name: item_name,
-                            })
-                            .collect::<Vec<ItemNameStrictCheck>>(),     
-                    )
-                }
-            }
+                false => Some(
+                    filters
+                        .item_names
+                        .clone()
+                        .into_iter()
+                        .map(|item_name| ItemNameStrictCheck {
+                            item_name: item_name,
+                        })
+                        .collect::<Vec<ItemNameStrictCheck>>(),
+                ),
+            },
         }
     }
 }
@@ -127,7 +126,6 @@ impl DBTableTrait for database::DB {
         match table_collection.insert_one(table, None).await {
             Ok(_) => Ok(table.clone().into()),
             Err(e) => {
-                println!("{:?}", e);
                 // I want to eventually be able to handle errors gracefully here
                 todo!()
             }

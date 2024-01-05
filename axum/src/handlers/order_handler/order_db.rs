@@ -2,7 +2,7 @@ use std::error::Error;
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use futures::TryStreamExt;
+use futures::{TryFutureExt, TryStreamExt};
 use mongodb::bson::{doc, Document};
 use mongodb::options::ReturnDocument;
 use serde::{Deserialize, Serialize};
@@ -11,6 +11,8 @@ use crate::common::database;
 use crate::common::database_helpers::collect_cursor;
 use crate::common::models::pagination_schema::Pagination;
 use crate::common::models::restaurant_schema::{Item, ItemResponse, Order, OrderResponse, Table};
+
+use super::order::ListOrderFiltersRequest;
 
 #[derive(Serialize)]
 struct CreateOrderUpdateDoc {
@@ -46,7 +48,7 @@ pub trait DBTableTrait {
         -> Result<Vec<OrderResponse>, Box<dyn Error>>;
     async fn list_all_orders(
         &self,
-        pagination: &Pagination,
+        filters: &ListOrderFiltersRequest,
     ) -> Result<ListOrderResult, Box<dyn Error>>;
 }
 
@@ -251,52 +253,95 @@ impl DBTableTrait for database::DB {
     //needs filters for the orders by completed orders, and
     async fn list_all_orders(
         &self,
-        pagination: &Pagination,
+        filters: &ListOrderFiltersRequest,
     ) -> Result<ListOrderResult, Box<dyn Error>> {
         let table_collection = self
             .db
             .database("table_management")
             .collection::<Document>("tables");
 
-        let find_options = mongodb::options::FindOptions::builder()
-            .limit(pagination.limit)
-            .skip(pagination.offset)
-            .sort(None)
-            .build();
-
-        let filter = doc! {};
-
-        let count_options = mongodb::options::CountOptions::builder().build();
-
-        let count = match table_collection
-            .count_documents(filter.clone(), Some(count_options))
-            .await
-        {
-            Ok(count) => count,
-            Err(e) => todo!(),
+        let mut filter = match filters.table_ids.is_empty() {
+            true => [doc! {
+                "$match":{
+                }
+            }]
+            .to_vec(),
+            false => [doc! {
+                "$match":{
+                    "table_id":{"$in":filters.table_ids.clone()}
+                }
+            }]
+            .to_vec(),
         };
 
-        match table_collection.find(filter, find_options).await {
+        //now try to get the aggregate
+        let aggregate_filter = list_all_orders_aggregate_helpers(filters.item_names.clone()).await;
+        filter.extend(aggregate_filter);
+
+        match table_collection.aggregate(filter, None).await {
             Ok(cursor) => {
                 let (orders, failed_orders, dropped) =
                     collect_cursor::<Order, OrderResponse>(cursor)
                         .await
                         .get_results();
-
                 Ok(ListOrderResult {
+                    count: orders.len() as u64,
                     orders,
                     failed_orders: match failed_orders.len() {
                         0 => None,
                         _ => Some(failed_orders),
                     },
-                    count,
                     dropped: dropped,
                 })
             }
             Err(e) => {
-                // I want to eventually be able to handle errors gracefully here
+                panic!("{e}");
                 todo!()
             }
         }
     }
+}
+
+pub async fn list_all_orders_aggregate_helpers(item_names: Vec<String>) -> Vec<Document> {
+    let mut aggregate_doc = match item_names.is_empty() {
+        true => [].to_vec(),
+        false => [doc! {
+            "$project":{
+                "orders":{
+                    "$filter":{
+                        "input": "$orders",
+                        "as": "order",
+                        "cond": {
+                                "$or":(
+                                    item_names.into_iter().map(|item_name|{
+                                        doc!{
+                                            "$eq":[item_name, "$$order.item.item_name"]
+                                        }
+                                    }).collect::<Vec<Document>>()
+                            )
+                        }
+                    }
+                }
+            }
+        }]
+        .to_vec(),
+    };
+    let projections = [
+        doc! {
+            "$unwind":"$orders"
+        },
+        doc! {
+            "$project":{
+                "orders":1
+            }
+        },
+        doc! {
+            "$replaceRoot" : {
+                "newRoot" : "$orders"
+            }
+        },
+    ]
+    .to_vec();
+    aggregate_doc.extend(projections);
+    aggregate_doc
 }

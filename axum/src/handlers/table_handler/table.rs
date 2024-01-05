@@ -31,10 +31,9 @@ pub struct ListTableFiltersRequest {
     pub item_names: Vec<String>,
 }
 
-pub fn default_vec_strings() -> Vec<String>{
+pub fn default_vec_strings() -> Vec<String> {
     vec![]
 }
-
 
 #[derive(Serialize)]
 struct ListTableResponse {

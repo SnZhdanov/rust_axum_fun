@@ -52,11 +52,8 @@ async fn main() {
     let app = Router::new()
         .route("/", get(|| async { "Welcome to the Restaurant!" }))
         .route("/table", post(table_handler::table::create_table))
-        .route("/table/list", get(table_handler::table::list_table))
-        .route(
-            "/table/list/order/list",
-            get(order_handler::order::list_all_orders),
-        )
+        .route("/table", get(table_handler::table::list_table))
+        .route("/table/order", get(order_handler::order::list_all_orders))
         .route("/table/:table_id", get(table_handler::table::get_table))
         .route(
             "/table/:table_id",
@@ -67,10 +64,6 @@ async fn main() {
             post(order_handler::order::create_order),
         )
         .route(
-            "/table/:table_id/order/list",
-            get(order_handler::order::list_table_orders),
-        )
-        .route(
             "/table/:table_id/order/:order_id",
             get(order_handler::order::get_order),
         )
@@ -78,7 +71,7 @@ async fn main() {
             "/table/:table_id/order/:order_id",
             delete(order_handler::order::delete_order),
         )
-        .route("/item/list", get(|| async { "Hello, World!" }));
+        .route("/item", get(|| async { "Hello, World!" }));
 
     let app_state = Arc::new(AppState {
         db,
@@ -93,19 +86,6 @@ async fn main() {
         .unwrap();
     axum::serve(listener, app).await.unwrap();
 }
-
-// async fn get_many_items(Query(pagination_params): Query<Pagination>) -> String {
-
-//     let pagination = Pagination {
-//         offset: pagination_params.offset,
-//         limit: pagination_params.limit,
-//     };
-
-//     let message = format!("offset={} & limit={}", pagination.offset, pagination.limit);
-//     println!("{}", &message);
-
-//     message
-// }
 
 #[cfg(test)]
 mod tests;

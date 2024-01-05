@@ -28,7 +28,7 @@ pub struct Item {
     pub cook_time: i64,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum CookStatus {
     InProgress,
     Done,

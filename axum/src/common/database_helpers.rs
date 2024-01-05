@@ -40,10 +40,12 @@ where
         Err(e) => todo!(),
     };
 
+    println!("the documents {:?} \n\n", documents.clone());
     let mut dropped: u64 = 0;
     let mut successfully_deserialized: Vec<BsonStruct> = [].to_vec();
     let mut failed_deserialized: Vec<String> = [].to_vec();
     for doc in documents.into_iter() {
+        println!("the document: {:?}\n", doc.clone());
         let deserialized: BsonStruct = match mongodb::bson::from_document::<JsonStruct>(doc.clone())
         {
             Ok(deserialized) => {

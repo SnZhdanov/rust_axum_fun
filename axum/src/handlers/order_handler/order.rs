@@ -1,18 +1,23 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
 };
+use axum_extra::extract::Query as ExtraQuery;
+
 use chrono::Utc;
-use mongodb::bson::Document;
+
 use serde::{Deserialize, Serialize};
 
 use super::order_db::DBTableTrait;
 use crate::{
-    common::models::restaurant_schema::{CookStatus, Order, OrderResponse, TableResponse},
+    common::models::{
+        pagination_schema::Pagination,
+        restaurant_schema::{CookStatus, Order, OrderResponse, TableResponse},
+    },
     AppState,
 };
 
@@ -35,6 +40,36 @@ struct ListTableOrdersResponse {
 #[derive(Serialize)]
 struct GetOrderResponse {
     order: OrderResponse,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ListOrderFiltersRequest {
+    #[serde(default = "default_vec_i64")]
+    pub table_ids: Vec<i64>,
+    #[serde(default = "default_vec_strings")]
+    pub item_names: Vec<String>,
+    pub cook_status: Option<CookStatus>,
+}
+pub fn default_vec_i64() -> Vec<i64> {
+    vec![]
+}
+
+pub fn default_vec_strings() -> Vec<String> {
+    vec![]
+}
+
+#[derive(Serialize)]
+struct ListOrdersResponse {
+    orders: Vec<OrderResponse>,
+    pagination: ListOrderPaginationResponse,
+    filters: ListOrderFiltersRequest,
+}
+
+#[derive(Serialize)]
+struct ListOrderPaginationResponse {
+    total: u64,
+    limit: i64,
+    offset: u64,
 }
 
 pub async fn create_order(
@@ -108,25 +143,97 @@ pub async fn get_order(
     }
 }
 
-pub async fn list_table_orders(
-    State(app_state): State<Arc<AppState>>,
-    Path(table_id): Path<i64>,
-) -> impl IntoResponse {
-    let db = &app_state.db;
+pub fn handle_cooking_status_filter(
+    orders: Vec<OrderResponse>,
+    cook_status: &CookStatus,
+) -> Vec<OrderResponse> {
+    orders
+        .into_iter()
+        .filter(|order| &order.cook_status == cook_status)
+        .collect::<Vec<OrderResponse>>()
+}
 
-    match db.list_table_orders(&table_id).await {
-        Ok(orders) => (
-            StatusCode::OK,
-            Json(ListTableOrdersResponse {
-                table_id: table_id,
-                orders: orders.into(),
-            }),
-        ),
-        Err(e) => todo!(),
+//some math is wrong here
+pub fn handle_pagination(
+    orders: Vec<OrderResponse>,
+    pagination: &Pagination,
+) -> Vec<OrderResponse> {
+    let total = orders.len();
+    //[0,1,2]
+    //offset =0 limit= 0 => a
+    //offset =0 limit = 10 b
+    // ofset = 10 limit = 1 a
+    // offset = 1 limit = 2 c [1,2]
+    // ofset = 1 limit = 2 c  [2] 3, 2
+    // ofset = 2 limit = 2 c  [2] 3, 2
+    if pagination.offset >= total as u64 || pagination.limit == 0 {
+        return [].to_vec();
+    }
+    let orders_as_slice = orders.as_slice();
+    if (pagination.offset as i64 + pagination.limit) > total as i64 {
+        let sliced_vec = &orders_as_slice[pagination.offset as usize..total];
+        sliced_vec.to_vec()
+    } else {
+        let sliced_vec = &orders_as_slice
+            [pagination.offset as usize..(pagination.offset as usize + pagination.limit as usize)];
+        sliced_vec.to_vec()
     }
 }
 
-pub async fn list_all_orders(State(app_state): State<Arc<AppState>>) -> impl IntoResponse {}
+#[derive(Serialize)]
+pub struct Errrrr {
+    pub err: String,
+}
+
+pub async fn list_all_orders(
+    State(app_state): State<Arc<AppState>>,
+    pagination: Query<Pagination>,
+    filters: ExtraQuery<ListOrderFiltersRequest>,
+) -> impl IntoResponse {
+    let db = &app_state.db;
+
+    let pagination = Pagination {
+        limit: pagination.limit,
+        offset: pagination.offset,
+    };
+
+    let filters = ListOrderFiltersRequest {
+        table_ids: filters.table_ids.clone(),
+        item_names: filters.item_names.clone(),
+        cook_status: filters.cook_status.clone(),
+    };
+
+    match db.list_all_orders(&filters).await {
+        Ok(mut list_order_result) => {
+            list_order_result.orders = match &filters.cook_status {
+                Some(cook_status) => {
+                    handle_cooking_status_filter(list_order_result.orders, cook_status)
+                }
+                None => list_order_result.orders,
+            };
+
+            let total = list_order_result.orders.len() as u64;
+            //now handle pagination since it does nothing right now.
+
+            list_order_result.orders = handle_pagination(list_order_result.orders, &pagination);
+            (
+                StatusCode::OK,
+                Json(ListOrdersResponse {
+                    orders: list_order_result.orders,
+                    pagination: ListOrderPaginationResponse {
+                        total,
+                        limit: pagination.limit,
+                        offset: pagination.offset,
+                    },
+                    filters,
+                }),
+            )
+        }
+        Err(e) => {
+            todo!();
+        }
+    }
+}
 
 pub async fn delete_order(
     State(app_state): State<Arc<AppState>>,
