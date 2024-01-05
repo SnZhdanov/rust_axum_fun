@@ -1,16 +1,14 @@
 mod common;
 mod handlers;
-use std::sync::{atomic::AtomicUsize, Arc};
+use std::sync::Arc;
 
 use axum::{
-    extract::Query,
     routing::{delete, get, post},
     Router,
 };
 use common::database::{DBTrait, DB};
 use common::errors::handler_404;
-use common::models::pagination_schema::Pagination;
-use handlers::{order_handler, table_handler};
+use handlers::{item_handler, order_handler, table_handler};
 
 use tokio::sync::Mutex;
 
@@ -21,8 +19,6 @@ struct AppState {
     // db pool
     db: DB,
 }
-
-type SharedState = Arc<Mutex<AppState>>;
 
 #[tokio::main]
 async fn main() {
@@ -71,7 +67,7 @@ async fn main() {
             "/table/:table_id/order/:order_id",
             delete(order_handler::order::delete_order),
         )
-        .route("/item", get(|| async { "Hello, World!" }));
+        .route("/item", get(item_handler::item::list_items));
 
     let app_state = Arc::new(AppState {
         db,

@@ -143,48 +143,6 @@ pub async fn get_order(
     }
 }
 
-pub fn handle_cooking_status_filter(
-    orders: Vec<OrderResponse>,
-    cook_status: &CookStatus,
-) -> Vec<OrderResponse> {
-    orders
-        .into_iter()
-        .filter(|order| &order.cook_status == cook_status)
-        .collect::<Vec<OrderResponse>>()
-}
-
-//some math is wrong here
-pub fn handle_pagination(
-    orders: Vec<OrderResponse>,
-    pagination: &Pagination,
-) -> Vec<OrderResponse> {
-    let total = orders.len();
-    //[0,1,2]
-    //offset =0 limit= 0 => a
-    //offset =0 limit = 10 b
-    // ofset = 10 limit = 1 a
-    // offset = 1 limit = 2 c [1,2]
-    // ofset = 1 limit = 2 c  [2] 3, 2
-    // ofset = 2 limit = 2 c  [2] 3, 2
-    if pagination.offset >= total as u64 || pagination.limit == 0 {
-        return [].to_vec();
-    }
-    let orders_as_slice = orders.as_slice();
-    if (pagination.offset as i64 + pagination.limit) > total as i64 {
-        let sliced_vec = &orders_as_slice[pagination.offset as usize..total];
-        sliced_vec.to_vec()
-    } else {
-        let sliced_vec = &orders_as_slice
-            [pagination.offset as usize..(pagination.offset as usize + pagination.limit as usize)];
-        sliced_vec.to_vec()
-    }
-}
-
-#[derive(Serialize)]
-pub struct Errrrr {
-    pub err: String,
-}
-
 pub async fn list_all_orders(
     State(app_state): State<Arc<AppState>>,
     pagination: Query<Pagination>,
@@ -249,5 +207,34 @@ pub async fn delete_order(
             }),
         ),
         Err(e) => todo!(),
+    }
+}
+
+pub fn handle_cooking_status_filter(
+    orders: Vec<OrderResponse>,
+    cook_status: &CookStatus,
+) -> Vec<OrderResponse> {
+    orders
+        .into_iter()
+        .filter(|order| &order.cook_status == cook_status)
+        .collect::<Vec<OrderResponse>>()
+}
+
+pub fn handle_pagination(
+    orders: Vec<OrderResponse>,
+    pagination: &Pagination,
+) -> Vec<OrderResponse> {
+    let total = orders.len();
+    if pagination.offset >= total as u64 || pagination.limit == 0 {
+        return [].to_vec();
+    }
+    let orders_as_slice = orders.as_slice();
+    if (pagination.offset as i64 + pagination.limit) > total as i64 {
+        let sliced_vec = &orders_as_slice[pagination.offset as usize..total];
+        sliced_vec.to_vec()
+    } else {
+        let sliced_vec = &orders_as_slice
+            [pagination.offset as usize..(pagination.offset as usize + pagination.limit as usize)];
+        sliced_vec.to_vec()
     }
 }

@@ -33,9 +33,7 @@ I can just do this
 ```
 curl -X GET 0.0.0.0:8080/table/1
 ```
-Again, if this were a real production environment and I were using MongoDB, I would default to using the `ObjectId`instead of some reference counter that resets when you exit the program (which is why I'm not storing the volume to prevent annoying behaviors).
-
-
+Again, if this were a real production environment and I were using MongoDB, I would default to using the `ObjectId` or overwriting the index field instead of some reference counter that resets when you exit the program (which is why I'm not storing the volume to prevent annoying behaviors).
 
 
 # TODO
@@ -73,14 +71,24 @@ Again, if this were a real production environment and I were using MongoDB, I wo
         - [] sort -- STRETCH
     - [x] delete
     - [] update  -- STRETCH
+- [] Crud for Items
+    - [x] list
+        - [x] filters
+            - [x] no filters
+            - [x] item_names
+        - [x] pagination    
+        - [] sort -- STRETCH
 - Error Handling
     - [] Tables
     - [] Orders
+    - [] Items 
 - Unit Tests
     - Tables
         - [] handlers
     - Orders
         - [] handlers
+    - Items
+        - [] handlers 
 - [] Integration Tests???  -- STRETCH
     - Tables
         - [] handlers
