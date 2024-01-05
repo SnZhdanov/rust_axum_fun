@@ -53,6 +53,10 @@ async fn main() {
         .route("/", get(|| async { "Welcome to the Restaurant!" }))
         .route("/table", post(table_handler::table::create_table))
         .route("/table/list", get(table_handler::table::list_table))
+        .route(
+            "/table/list/orders",
+            get(order_handler::order::list_all_orders),
+        )
         .route("/table/:table_id", get(table_handler::table::get_table))
         .route(
             "/table/:table_id",
@@ -64,15 +68,15 @@ async fn main() {
         )
         .route(
             "/table/:table_id/order/list",
-            get(|| async { "Hello, World!" }),
+            get(order_handler::order::list_table_orders),
         )
         .route(
             "/table/:table_id/order/:order_id",
-            get(|| async { "Hello, World!" }),
+            get(order_handler::order::get_order),
         )
         .route(
             "/table/:table_id/order/:order_id",
-            delete(|| async { "Hello, World!" }),
+            delete(order_handler::order::delete_order),
         )
         .route("/item/list", get(|| async { "Hello, World!" }));
 

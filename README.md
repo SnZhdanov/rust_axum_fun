@@ -50,14 +50,16 @@ Again, if this were a real production environment and I were using MongoDB, I wo
         - [x] insert
     - [x] get
     - [x] list
+        - [] filter
         - [] sort -- STRETCH
         - [x] pagination
     - [x]delete
     - [] update??? -- STRETCH
 - [] Crud for Orders
-    - [] create
+    - [x] create
     - [] get
     - [] list
+        - [] filter
     - [] delete
     - [] update????  -- STRETCH
 - Error Handling

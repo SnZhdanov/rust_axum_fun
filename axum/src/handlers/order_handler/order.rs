@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use super::order_db::DBTableTrait;
 use crate::{
-    common::models::restaurant_schema::{CookStatus, Order, TableResponse},
+    common::models::restaurant_schema::{CookStatus, Order, OrderResponse, TableResponse},
     AppState,
 };
 
@@ -22,8 +22,19 @@ pub struct CreateOrdersRequest {
 }
 
 #[derive(Serialize)]
-struct CreateOrdersResponse {
+struct ReturnTableResponse {
     table: TableResponse,
+}
+
+#[derive(Serialize)]
+struct ListTableOrdersResponse {
+    table_id: i64,
+    orders: Vec<OrderResponse>,
+}
+
+#[derive(Serialize)]
+struct GetOrderResponse {
+    order: OrderResponse,
 }
 
 pub async fn create_order(
@@ -72,7 +83,61 @@ pub async fn create_order(
     match db.create_orders(&table_id, order_docs).await {
         Ok(table) => (
             StatusCode::OK,
-            Json(CreateOrdersResponse {
+            Json(ReturnTableResponse {
+                table: table.into(),
+            }),
+        ),
+        Err(e) => todo!(),
+    }
+}
+
+pub async fn get_order(
+    State(app_state): State<Arc<AppState>>,
+    Path((table_id, order_id)): Path<(i64, i64)>,
+) -> impl IntoResponse {
+    let db = &app_state.db;
+
+    match db.get_order(&table_id, &order_id).await {
+        Ok(order) => (
+            StatusCode::OK,
+            Json(GetOrderResponse {
+                order: order.into(),
+            }),
+        ),
+        Err(e) => todo!(),
+    }
+}
+
+pub async fn list_table_orders(
+    State(app_state): State<Arc<AppState>>,
+    Path(table_id): Path<i64>,
+) -> impl IntoResponse {
+    let db = &app_state.db;
+
+    match db.list_table_orders(&table_id).await {
+        Ok(orders) => (
+            StatusCode::OK,
+            Json(ListTableOrdersResponse {
+                table_id: table_id,
+                orders: orders.into(),
+            }),
+        ),
+        Err(e) => todo!(),
+    }
+}
+
+pub async fn list_all_orders(State(app_state): State<Arc<AppState>>) -> impl IntoResponse {}
+
+pub async fn delete_order(
+    State(app_state): State<Arc<AppState>>,
+    Path((table_id, order_id)): Path<(i64, i64)>,
+) -> impl IntoResponse {
+    let db = &app_state.db;
+
+    match db.delete_order(&table_id, &order_id).await {
+        Ok(table) => (
+            StatusCode::OK,
+            Json(ReturnTableResponse {
                 table: table.into(),
             }),
         ),
