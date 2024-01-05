@@ -33,7 +33,7 @@ I can just do this
 ```
 curl -X GET 0.0.0.0:8080/table/1
 ```
-Again, if this were a real production environment and I were using MongoDB, I would default to using the `ObjectId`instead of some reference counter that resets when you exit the program.
+Again, if this were a real production environment and I were using MongoDB, I would default to using the `ObjectId`instead of some reference counter that resets when you exit the program (which is why I'm not storing the volume to prevent annoying behaviors).
 
 
 
@@ -50,32 +50,41 @@ Again, if this were a real production environment and I were using MongoDB, I wo
         - [x] insert
     - [x] get
     - [x] list
-        - [] sort -- STRETCH
+        - [x] filter
+            - [x] no filters
+            - [x] table_id
+            - [x] order_id
+            - [x] item_name fuzzy check
+            - [x] list of item_names
+            - [] order status -- STRETCH
         - [x] pagination
+        - [] sort -- STRETCH
     - [x]delete
-    - [] update??? -- STRETCH
+    - [] update -- STRETCH
 - [] Crud for Orders
-    - [] create
-    - [] get
-    - [] list
-    - [] delete
-    - [] update????  -- STRETCH
+    - [x] create
+    - [x] get
+    - [x] list
+        - [x] filters
+            - [x] no filters
+            - [x] item_names
+            - [x] order status
+        - [x] pagination    
+        - [] sort -- STRETCH
+    - [x] delete
+    - [] update  -- STRETCH
 - Error Handling
     - [] Tables
     - [] Orders
 - Unit Tests
     - Tables
         - [] handlers
-        - [] db impls
     - Orders
         - [] handlers
-        - [] db impls
 - [] Integration Tests???  -- STRETCH
     - Tables
         - [] handlers
-        - [] db impls
     - Orders
         - [] handlers
-        - [] db impls
 - Live Testing
     - [] todo

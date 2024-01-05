@@ -1,17 +1,33 @@
 # Use root/example as user/password credentials
 version: '3.1'
-
+networks:
+  api_networks:
 services:
   mongo:
     image: mongo:latest
     container_name: mongo
     ports:
       - '27017:27017'
-    volumes:
-      - dbdata6:/data/db
+    # volumes:
+    #   - dbdata6:/data/db
     restart: always
     env_file:
       - .env
+    networks:
+      - api_networks
+  # axum:
+  #   build:
+  #     context: ./axum
+  #   container_name: axum
+  #   ports:
+  #     - '8080:8080'
+  #   networks:
+  #     - api_networks
+  #   restart: always
+  #   command: bash -c "cargo run"
+  #   depends_on:
+  #     - mongo
+
   # rust:
   #   image: rust_up_in_here
   #   depends_on:

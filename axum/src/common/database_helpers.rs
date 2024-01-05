@@ -2,19 +2,19 @@ use futures::stream::TryStreamExt;
 use mongodb::bson::Document;
 use mongodb::Cursor;
 use serde::de::DeserializeOwned;
-use serde::Deserialize;
+use std::fmt::Debug;
 
-pub struct CollectCusrorResult<JsonStruct> {
-    successfully_deserialized: Vec<JsonStruct>,
+pub struct CollectCusrorResult<BsonStruct> {
+    successfully_deserialized: Vec<BsonStruct>,
     failed_deserialized: Vec<String>,
     dropped: u64,
 }
 
-impl<JsonStruct> CollectCusrorResult<JsonStruct>
+impl<BsonStruct> CollectCusrorResult<BsonStruct>
 where
-    JsonStruct: Clone,
+    BsonStruct: Clone,
 {
-    pub fn get_results(&self) -> (Vec<JsonStruct>, Vec<String>, u64) {
+    pub fn get_results(&self) -> (Vec<BsonStruct>, Vec<String>, u64) {
         return (
             self.successfully_deserialized.clone(),
             self.failed_deserialized.clone(),
@@ -23,13 +23,15 @@ where
     }
 }
 
-pub async fn collect_cursor<BsonStruct, JsonStruct>(
+pub async fn collect_cursor<JsonStruct, BsonStruct>(
     cursor: Cursor<Document>,
-) -> CollectCusrorResult<JsonStruct>
+) -> CollectCusrorResult<BsonStruct>
 where
     BsonStruct: Clone,
-    BsonStruct: Into<JsonStruct>,
     BsonStruct: DeserializeOwned,
+    BsonStruct: Debug,
+    JsonStruct: Into<BsonStruct>,
+    JsonStruct: Debug,
     JsonStruct: DeserializeOwned,
     JsonStruct: Clone,
 {
@@ -38,13 +40,20 @@ where
         Err(e) => todo!(),
     };
 
+    println!("the documents {:?} \n\n", documents.clone());
     let mut dropped: u64 = 0;
-    let mut successfully_deserialized: Vec<JsonStruct> = [].to_vec();
+    let mut successfully_deserialized: Vec<BsonStruct> = [].to_vec();
     let mut failed_deserialized: Vec<String> = [].to_vec();
     for doc in documents.into_iter() {
-        let deserialized: JsonStruct = match mongodb::bson::from_document::<BsonStruct>(doc.clone())
+        println!("the document: {:?}\n", doc.clone());
+        let deserialized: BsonStruct = match mongodb::bson::from_document::<JsonStruct>(doc.clone())
         {
-            Ok(deserialized) => deserialized.into(),
+            Ok(deserialized) => {
+                println!(" json form {:?}", deserialized);
+                let y = deserialized.into();
+                println!("response form {:?}", y);
+                y
+            }
             Err(e) => {
                 dropped += 1;
 

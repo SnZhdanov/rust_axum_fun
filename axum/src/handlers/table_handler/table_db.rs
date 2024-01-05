@@ -1,6 +1,8 @@
 use async_trait::async_trait;
+use axum::extract::Query;
 use mongodb::bson::doc;
 use mongodb::bson::Document;
+use mongodb::bson::Regex;
 use serde::{Deserialize, Serialize};
 //use futures::TryStreamExt;
 use std::error::Error;
@@ -11,13 +13,77 @@ use crate::common::models::pagination_schema::Pagination;
 use crate::common::models::restaurant_schema::{Table, TableResponse};
 use crate::common::models::sort_schema::SortDirectionBsonEnum;
 use crate::common::models::sort_schema::SortDirectionEnum;
-
+use crate::table_handler::table::ListTableFiltersRequest;
 #[derive(Serialize, Deserialize)]
 pub struct ListTablesResult {
     pub tables: Vec<TableResponse>,
     pub failed_tables: Option<Vec<String>>,
     pub count: u64,
     pub dropped: u64,
+}
+
+#[derive(Serialize, Clone)]
+pub struct ListTableFiltersBson {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    table_id: Option<i64>,
+    #[serde(rename = "orders.order_id", skip_serializing_if = "Option::is_none")]
+    order_id: Option<i64>,
+    #[serde(
+        rename = "orders.item.item_name",
+        skip_serializing_if = "Option::is_none"
+    )]
+    item_name: Option<ItemNameFuzzyRegex>,
+    #[serde(rename = "$and", skip_serializing_if = "Option::is_none")]
+    item_names_strict: Option<Vec<ItemNameStrictCheck>>,
+}
+
+#[derive(Serialize, Clone)]
+pub struct ItemNameFuzzyRegex {
+    #[serde(rename(serialize = "$regex"))]
+    regex: Regex,
+}
+
+#[derive(Serialize, Clone)]
+pub struct ItemNameStrictCheck {
+    #[serde(rename = "orders.item.item_name")]
+    item_name: String,
+}
+
+impl From<ListTableFiltersRequest> for ListTableFiltersBson {
+    fn from(filters: ListTableFiltersRequest) -> Self {
+        Self {
+            table_id: match filters.table_id {
+                Some(t) => Some(t),
+                None => None,
+            },
+            order_id: match filters.order_id {
+                Some(o) => Some(o),
+                None => None,
+            },
+            item_name: match filters.item_name.clone() {
+                Some(item_name) => Some(ItemNameFuzzyRegex {
+                    regex: Regex {
+                        pattern: item_name,
+                        options: "i".to_string(),
+                    },
+                }),
+                None => None,
+            },
+            item_names_strict: match filters.item_names.is_empty() {
+                true => None,
+                false => Some(
+                    filters
+                        .item_names
+                        .clone()
+                        .into_iter()
+                        .map(|item_name| ItemNameStrictCheck {
+                            item_name: item_name,
+                        })
+                        .collect::<Vec<ItemNameStrictCheck>>(),
+                ),
+            },
+        }
+    }
 }
 
 #[async_trait]
@@ -27,6 +93,7 @@ pub trait DBTableTrait {
     async fn list_tables(
         &self,
         pagination: &Pagination,
+        filters: ListTableFiltersRequest,
     ) -> Result<ListTablesResult, Box<dyn Error>>;
     async fn delete_table(&self, table_id: i64) -> Result<TableResponse, Box<dyn Error>>;
 }
@@ -59,7 +126,6 @@ impl DBTableTrait for database::DB {
         match table_collection.insert_one(table, None).await {
             Ok(_) => Ok(table.clone().into()),
             Err(e) => {
-                println!("{:?}", e);
                 // I want to eventually be able to handle errors gracefully here
                 todo!()
             }
@@ -90,6 +156,7 @@ impl DBTableTrait for database::DB {
     async fn list_tables(
         &self,
         pagination: &Pagination,
+        filters: ListTableFiltersRequest,
     ) -> Result<ListTablesResult, Box<dyn Error>> {
         let table_collection = self
             .db
@@ -101,8 +168,14 @@ impl DBTableTrait for database::DB {
             .skip(pagination.offset)
             .sort(None)
             .build();
+        let filters_as_bson: ListTableFiltersBson = filters.into();
 
-        let filter = doc! {};
+        let filter: Document = match mongodb::bson::to_document(&filters_as_bson) {
+            Ok(document) => document,
+            Err(e) => {
+                todo!()
+            }
+        };
 
         let count_options = mongodb::options::CountOptions::builder().build();
 

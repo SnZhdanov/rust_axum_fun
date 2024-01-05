@@ -10,12 +10,14 @@ use axum::{
 use common::database::{DBTrait, DB};
 use common::errors::handler_404;
 use common::models::pagination_schema::Pagination;
-use handlers::table_handler;
+use handlers::{order_handler, table_handler};
+
 use tokio::sync::Mutex;
 
 struct AppState {
     // We require unique table ids
     tables: Mutex<i64>,
+    orders: Mutex<i64>,
     // db pool
     db: DB,
 }
@@ -38,34 +40,43 @@ async fn main() {
         }
     };
 
+    //pre-load the database with items
+    match db.set_up_item_records().await {
+        Ok(_) => (),
+        Err(e) => {
+            todo!()
+        }
+    };
+
     // build our application with a single route
     let app = Router::new()
         .route("/", get(|| async { "Welcome to the Restaurant!" }))
         .route("/table", post(table_handler::table::create_table))
-        .route("/table/list", get(table_handler::table::list_table))
+        .route("/table", get(table_handler::table::list_table))
+        .route("/table/order", get(order_handler::order::list_all_orders))
         .route("/table/:table_id", get(table_handler::table::get_table))
         .route(
             "/table/:table_id",
             delete(table_handler::table::delete_table),
         )
-        .route("/table/:table_id/order", post(|| async { "Hello, World!" }))
         .route(
-            "/table/:table_id/order/list",
-            get(|| async { "Hello, World!" }),
+            "/table/:table_id/order",
+            post(order_handler::order::create_order),
         )
         .route(
             "/table/:table_id/order/:order_id",
-            get(|| async { "Hello, World!" }),
+            get(order_handler::order::get_order),
         )
         .route(
             "/table/:table_id/order/:order_id",
-            delete(|| async { "Hello, World!" }),
+            delete(order_handler::order::delete_order),
         )
-        .route("/item/list", get(|| async { "Hello, World!" }));
+        .route("/item", get(|| async { "Hello, World!" }));
 
     let app_state = Arc::new(AppState {
         db,
         tables: Mutex::new(0),
+        orders: Mutex::new(0),
     });
     let app = app.fallback(handler_404).with_state(app_state);
 
@@ -75,19 +86,6 @@ async fn main() {
         .unwrap();
     axum::serve(listener, app).await.unwrap();
 }
-
-// async fn get_many_items(Query(pagination_params): Query<Pagination>) -> String {
-
-//     let pagination = Pagination {
-//         offset: pagination_params.offset,
-//         limit: pagination_params.limit,
-//     };
-
-//     let message = format!("offset={} & limit={}", pagination.offset, pagination.limit);
-//     println!("{}", &message);
-
-//     message
-// }
 
 #[cfg(test)]
 mod tests;

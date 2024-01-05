@@ -1,15 +1,15 @@
 use std::sync::Arc;
 
-use serde::{Deserialize, Serialize};
-
 use axum::{
     extract::Path, extract::Query, extract::State, http::StatusCode, response::IntoResponse, Json,
 };
+use axum_extra::extract::Query as ExtraQuery;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     common::models::{
         pagination_schema::Pagination,
-        restaurant_schema::{Table, TableResponse},
+        restaurant_schema::{CookStatus, Table, TableResponse},
     },
     AppState,
 };
@@ -22,10 +22,24 @@ struct PostTableResponse {
     table: TableResponse,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ListTableFiltersRequest {
+    pub table_id: Option<i64>,
+    pub order_id: Option<i64>,
+    pub item_name: Option<String>,
+    #[serde(default = "default_vec_strings")]
+    pub item_names: Vec<String>,
+}
+
+pub fn default_vec_strings() -> Vec<String> {
+    vec![]
+}
+
 #[derive(Serialize)]
 struct ListTableResponse {
     tables: Vec<TableResponse>,
     pagination: ListTablePaginationResponse,
+    filters: ListTableFiltersRequest,
     errors: ListTableErrorResponse,
 }
 
@@ -75,6 +89,7 @@ pub async fn create_table(State(app_state): State<Arc<AppState>>) -> impl IntoRe
 pub async fn list_table(
     State(app_state): State<Arc<AppState>>,
     pagination: Query<Pagination>,
+    filters: ExtraQuery<ListTableFiltersRequest>,
 ) -> impl IntoResponse {
     let db = &app_state.db;
     let pagination = Pagination {
@@ -82,11 +97,19 @@ pub async fn list_table(
         offset: pagination.offset,
     };
 
-    match db.list_tables(&pagination).await {
+    let filters = ListTableFiltersRequest {
+        table_id: filters.table_id,
+        order_id: filters.order_id,
+        item_name: filters.item_name.clone(),
+        item_names: filters.item_names.clone(),
+    };
+
+    match db.list_tables(&pagination, filters.clone()).await {
         Ok(list_result) => (
             StatusCode::OK,
             Json(ListTableResponse {
                 tables: list_result.tables,
+                filters,
                 pagination: ListTablePaginationResponse {
                     total: list_result.count,
                     limit: pagination.limit,
@@ -110,7 +133,7 @@ pub async fn get_table(
     let table_id = table_id;
 
     match db.get_table(table_id).await {
-        Ok(list_result) => (StatusCode::OK, Json(list_result)),
+        Ok(table_result) => (StatusCode::OK, Json(TableResponse::from(table_result))),
         Err(e) => todo!(),
     }
 }

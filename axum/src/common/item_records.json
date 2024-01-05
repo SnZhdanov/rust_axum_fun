@@ -1,0 +1,41 @@
+{
+    "records":[
+    {
+        "item_name":"Ramen",
+        "cook_time":30
+    },
+    {
+        "item_name":"Hotdog",
+        "cook_time":10
+    },
+    {
+        "item_name":"Gyoza",
+        "cook_time":15
+    },
+    {
+        "item_name":"Hamburger",
+        "cook_time":20
+    },
+    {
+        "item_name":"Udon",
+        "cook_time":5
+    },
+    {
+        "item_name":"Unagi Don",
+        "cook_time":40
+    },
+    {
+        "item_name":"Borsht",
+        "cook_time":5
+    },
+    {
+        "item_name":"Grilled Cheese",
+        "cook_time":3
+    },
+    {
+        "item_name":"Tonkatsu",
+        "cook_time":7
+    }
+
+]
+}
