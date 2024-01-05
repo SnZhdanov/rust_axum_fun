@@ -110,7 +110,7 @@ pub async fn get_table(
     let table_id = table_id;
 
     match db.get_table(table_id).await {
-        Ok(list_result) => (StatusCode::OK, Json(list_result)),
+        Ok(table_result) => (StatusCode::OK, Json(TableResponse::from(table_result))),
         Err(e) => todo!(),
     }
 }

@@ -1,7 +1,10 @@
+use super::models::restaurant_schema::Item;
 use async_trait::async_trait;
-use mongodb::{options::ClientOptions, Client};
+use futures::stream::TryStreamExt;
+use mongodb::{bson::doc, options::ClientOptions, Client};
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
-use std::{error::Error, time::Duration};
+use serde_json::Value;
+use std::{error::Error, fs, time::Duration};
 
 #[derive(Clone)]
 pub struct DB {
@@ -13,6 +16,7 @@ pub trait DBTrait {
     async fn init() -> Result<Self, Box<dyn Error>>
     where
         Self: Sized;
+    async fn set_up_item_records(&self) -> Result<(), Box<dyn Error>>;
 }
 
 #[async_trait]
@@ -47,6 +51,50 @@ impl DBTrait for DB {
                 })
             }
             Err(e) => Err(format!("Could not connect to the DB: {e}").into()),
+        }
+    }
+
+    async fn set_up_item_records(&self) -> Result<(), Box<dyn Error>> {
+        let item_collection = self
+            .db
+            .database("item_management")
+            .collection::<Item>("items");
+
+        match item_collection.find(doc! {}, None).await {
+            Ok(cursor) => {
+                let items: Vec<Item> = match cursor.try_collect().await {
+                    Ok(items) => items,
+                    Err(e) => panic!("Couldn't get the records! Error: {e}"),
+                };
+
+                if items.is_empty() {
+                    ()
+                } else {
+                    return Ok(());
+                }
+            }
+            Err(e) => {
+                panic!("unexpected error finding the records: {e}")
+                //drop all the records
+            }
+        };
+
+        let file = fs::File::open("./axum/src/common/item_records.json").expect("File not found!");
+
+        let json: Value = serde_json::from_reader(file).expect("Was unable to read the file!");
+
+        let records_arr: Vec<Item> = match json.get("records") {
+            Some(records) => {
+                serde_json::from_value(records.clone()).expect("unable to parse the item records!")
+            }
+            None => panic!("Was unable to find the record's key!"),
+        };
+
+        match item_collection.insert_many(records_arr, None).await {
+            Ok(_) => Ok(()),
+            Err(e) => panic!(
+                "Unexpected error while inserting many records into the Item Database! Error: {e}"
+            ),
         }
     }
 }

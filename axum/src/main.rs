@@ -10,12 +10,14 @@ use axum::{
 use common::database::{DBTrait, DB};
 use common::errors::handler_404;
 use common::models::pagination_schema::Pagination;
-use handlers::table_handler;
+use handlers::{order_handler, table_handler};
+
 use tokio::sync::Mutex;
 
 struct AppState {
     // We require unique table ids
     tables: Mutex<i64>,
+    orders: Mutex<i64>,
     // db pool
     db: DB,
 }
@@ -38,6 +40,14 @@ async fn main() {
         }
     };
 
+    //pre-load the database with items
+    match db.set_up_item_records().await {
+        Ok(_) => (),
+        Err(e) => {
+            todo!()
+        }
+    };
+
     // build our application with a single route
     let app = Router::new()
         .route("/", get(|| async { "Welcome to the Restaurant!" }))
@@ -48,7 +58,10 @@ async fn main() {
             "/table/:table_id",
             delete(table_handler::table::delete_table),
         )
-        .route("/table/:table_id/order", post(|| async { "Hello, World!" }))
+        .route(
+            "/table/:table_id/order",
+            post(order_handler::order::create_order),
+        )
         .route(
             "/table/:table_id/order/list",
             get(|| async { "Hello, World!" }),
@@ -66,6 +79,7 @@ async fn main() {
     let app_state = Arc::new(AppState {
         db,
         tables: Mutex::new(0),
+        orders: Mutex::new(0),
     });
     let app = app.fallback(handler_404).with_state(app_state);
 

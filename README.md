@@ -33,7 +33,7 @@ I can just do this
 ```
 curl -X GET 0.0.0.0:8080/table/1
 ```
-Again, if this were a real production environment and I were using MongoDB, I would default to using the `ObjectId`instead of some reference counter that resets when you exit the program.
+Again, if this were a real production environment and I were using MongoDB, I would default to using the `ObjectId`instead of some reference counter that resets when you exit the program (which is why I'm not storing the volume to prevent annoying behaviors).
 
 
 
@@ -66,16 +66,12 @@ Again, if this were a real production environment and I were using MongoDB, I wo
 - Unit Tests
     - Tables
         - [] handlers
-        - [] db impls
     - Orders
         - [] handlers
-        - [] db impls
 - [] Integration Tests???  -- STRETCH
     - Tables
         - [] handlers
-        - [] db impls
     - Orders
         - [] handlers
-        - [] db impls
 - Live Testing
     - [] todo

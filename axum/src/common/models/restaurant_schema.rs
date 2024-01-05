@@ -1,6 +1,9 @@
-use chrono::{prelude::*, DateTime};
+use std::str::FromStr;
+
+use chrono::{prelude::*, DateTime, Duration};
 use mongodb::bson::serde_helpers::{chrono_datetime_as_bson_datetime, hex_string_as_object_id};
 use serde::{Deserialize, Serialize};
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Table {
     #[serde(rename = "_id", with = "hex_string_as_object_id")]
@@ -14,7 +17,7 @@ pub struct Order {
     pub order_id: i64,
     pub table_id: i64,
     #[serde(with = "chrono_datetime_as_bson_datetime")]
-    pub order_time: DateTime<Utc>,
+    pub ordered_time: DateTime<Utc>,
     pub cook_status: CookStatus,
     pub item: Item,
 }
@@ -22,8 +25,7 @@ pub struct Order {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Item {
     pub item_name: String,
-    #[serde(with = "chrono_datetime_as_bson_datetime")]
-    pub cook_time: DateTime<Utc>,
+    pub cook_time: i64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -42,7 +44,7 @@ pub struct TableResponse {
 pub struct OrderResponse {
     pub order_id: i64,
     pub table_id: i64,
-    pub order_time: DateTime<Utc>,
+    pub ordered_time: DateTime<Utc>,
     pub cook_status: CookStatus,
     pub item: ItemResponse,
 }
@@ -50,7 +52,7 @@ pub struct OrderResponse {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ItemResponse {
     pub item_name: String,
-    pub cook_time: DateTime<Utc>,
+    pub cook_time: i64,
 }
 
 impl From<Table> for TableResponse {
@@ -70,16 +72,23 @@ impl From<Order> for OrderResponse {
         let Order {
             order_id,
             table_id,
-            order_time,
-            cook_status,
+            ordered_time,
             item,
             ..
         } = order;
         Self {
             order_id,
             table_id,
-            order_time,
-            cook_status,
+            ordered_time: ordered_time.clone(),
+            cook_status: {
+                let current_time = Utc::now();
+                let time_cooked = ordered_time + Duration::seconds(item.cook_time);
+                if current_time >= time_cooked {
+                    CookStatus::Done
+                } else {
+                    CookStatus::InProgress
+                }
+            },
             item: item.into(),
         }
     }
@@ -94,6 +103,26 @@ impl From<Item> for ItemResponse {
         Self {
             item_name,
             cook_time,
+        }
+    }
+}
+
+impl ToString for CookStatus {
+    fn to_string(&self) -> String {
+        match self {
+            CookStatus::InProgress => "InProgress".into(),
+            CookStatus::Done => "Done".into(),
+        }
+    }
+}
+
+impl FromStr for CookStatus {
+    type Err = ();
+    fn from_str(input: &str) -> Result<CookStatus, Self::Err> {
+        match input {
+            "InProgress" => Ok(CookStatus::InProgress),
+            "Done" => Ok(CookStatus::Done),
+            _ => Err(()),
         }
     }
 }
