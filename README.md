@@ -51,17 +51,25 @@ Again, if this were a real production environment and I were using MongoDB, I wo
     - [x] get
     - [x] list
         - [] filter
+            - [x] table_id
+            - [x] order_id
+            - [x] item_name fuzzy check
+            - [x] list of item_names
         - [] sort -- STRETCH
         - [x] pagination
     - [x]delete
-    - [] update??? -- STRETCH
+    - [] update -- STRETCH
 - [] Crud for Orders
     - [x] create
-    - [] get
+    - [x] get
     - [] list
         - [] filter
-    - [] delete
-    - [] update????  -- STRETCH
+            - [] ordered_time
+            - [] item_name
+            - [] item_names
+        - [] sort -- STRETCH
+    - [x] delete
+    - [] update  -- STRETCH
 - Error Handling
     - [] Tables
     - [] Orders

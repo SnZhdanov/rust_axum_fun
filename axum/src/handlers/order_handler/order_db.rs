@@ -194,7 +194,7 @@ impl DBTableTrait for database::DB {
         let table_collection = self
             .db
             .database("table_management")
-            .collection::<Order>("tables");
+            .collection::<Table>("tables");
 
         //check if the table and the order exist
         let filter = doc! {
@@ -207,8 +207,15 @@ impl DBTableTrait for database::DB {
         };
 
         match table_collection.find_one(filter, None).await {
-            Ok(opt_order) => match opt_order {
-                Some(order) => Ok(order),
+            Ok(opt_table) => match opt_table {
+                Some(table) => {
+                    let order_vec: Vec<Order> = table
+                        .orders
+                        .into_iter()
+                        .filter(|order| &order.order_id == order_id)
+                        .collect();
+                    Ok(order_vec[0].to_owned())
+                }
                 None => todo!(),
             },
             Err(e) => todo!(),

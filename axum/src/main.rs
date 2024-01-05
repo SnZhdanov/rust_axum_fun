@@ -54,7 +54,7 @@ async fn main() {
         .route("/table", post(table_handler::table::create_table))
         .route("/table/list", get(table_handler::table::list_table))
         .route(
-            "/table/list/orders",
+            "/table/list/order/list",
             get(order_handler::order::list_all_orders),
         )
         .route("/table/:table_id", get(table_handler::table::get_table))
