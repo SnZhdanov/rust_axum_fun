@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use axum::extract::Query;
+
 use mongodb::bson::doc;
 use mongodb::bson::Document;
 use mongodb::bson::Regex;
@@ -11,8 +11,7 @@ use crate::common::database;
 use crate::common::database_helpers::collect_cursor;
 use crate::common::models::pagination_schema::Pagination;
 use crate::common::models::restaurant_schema::{Table, TableResponse};
-use crate::common::models::sort_schema::SortDirectionBsonEnum;
-use crate::common::models::sort_schema::SortDirectionEnum;
+
 use crate::table_handler::table::ListTableFiltersRequest;
 #[derive(Serialize, Deserialize)]
 pub struct ListTablesResult {

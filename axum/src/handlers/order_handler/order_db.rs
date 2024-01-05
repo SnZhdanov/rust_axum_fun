@@ -2,15 +2,14 @@ use std::error::Error;
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use futures::{TryFutureExt, TryStreamExt};
 use mongodb::bson::{doc, Document};
 use mongodb::options::ReturnDocument;
 use serde::{Deserialize, Serialize};
 
 use crate::common::database;
 use crate::common::database_helpers::collect_cursor;
-use crate::common::models::pagination_schema::Pagination;
-use crate::common::models::restaurant_schema::{Item, ItemResponse, Order, OrderResponse, Table};
+
+use crate::common::models::restaurant_schema::{Item, Order, OrderResponse, Table};
 
 use super::order::ListOrderFiltersRequest;
 
@@ -40,7 +39,6 @@ pub trait DBTableTrait {
         table_id: &i64,
         orders: Vec<Document>,
     ) -> Result<Table, Box<dyn Error>>;
-    async fn get_items(&self, item_names: Vec<String>) -> Result<Vec<Item>, Box<dyn Error>>;
     async fn get_item(&self, item_name: String) -> Result<Option<Item>, Box<dyn Error>>;
     async fn delete_order(&self, table_id: &i64, order_id: &i64) -> Result<Table, Box<dyn Error>>;
     async fn get_order(&self, table_id: &i64, order_id: &i64) -> Result<Order, Box<dyn Error>>;
@@ -89,29 +87,6 @@ impl DBTableTrait for database::DB {
                 None => todo!(),
             },
             Err(e) => panic!("{e}"),
-        }
-    }
-
-    async fn get_items(&self, item_names: Vec<String>) -> Result<Vec<Item>, Box<dyn Error>> {
-        let item_collection = self
-            .db
-            .database("item_management")
-            .collection::<Item>("items");
-
-        let filter = doc! {
-            "item_name":{
-                "$in":item_names
-            }
-        };
-
-        match item_collection.find(filter, None).await {
-            Ok(cursor) => match cursor.try_collect::<Vec<Item>>().await {
-                Ok(items) => Ok(items),
-                Err(e) => panic!("Couldn't get the records! Error: {e}"),
-            },
-            Err(e) => {
-                todo!()
-            }
         }
     }
 

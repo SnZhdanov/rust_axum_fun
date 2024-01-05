@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     common::models::{
         pagination_schema::Pagination,
-        restaurant_schema::{CookStatus, Table, TableResponse},
+        restaurant_schema::{Table, TableResponse},
     },
     AppState,
 };
