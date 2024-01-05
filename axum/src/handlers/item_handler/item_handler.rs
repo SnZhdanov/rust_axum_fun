@@ -1,12 +1,13 @@
-use std::error::Error;
-
 use async_trait::async_trait;
+use axum::http::StatusCode;
 use mongodb::bson::{doc, Document};
 use serde::{Deserialize, Serialize};
+use tracing::error;
 
 use crate::common::{
     database,
     database_helpers::collect_cursor,
+    errors::AxumErrors,
     models::{
         pagination_schema::Pagination,
         restaurant_schema::{Item, ItemResponse},
@@ -27,7 +28,7 @@ pub trait DBTableTrait {
         &self,
         item_names: Vec<String>,
         pagination: &Pagination,
-    ) -> Result<ListItemResults, Box<dyn Error>>;
+    ) -> Result<ListItemResults, (StatusCode, AxumErrors)>;
 }
 
 #[async_trait]
@@ -36,7 +37,7 @@ impl DBTableTrait for database::DB {
         &self,
         item_names: Vec<String>,
         pagination: &Pagination,
-    ) -> Result<ListItemResults, Box<dyn Error>> {
+    ) -> Result<ListItemResults, (StatusCode, AxumErrors)> {
         let item_collection = self
             .db
             .database("item_management")
@@ -67,7 +68,10 @@ impl DBTableTrait for database::DB {
             .await
         {
             Ok(count) => count,
-            Err(e) => todo!(),
+            Err(e) => {
+                error!("Unexpected error occured while coutning Items in the Database. Error: {e}");
+                return Err((StatusCode::INTERNAL_SERVER_ERROR, AxumErrors::DBError));
+            }
         };
 
         match item_collection.find(filter, find_options).await {
@@ -87,7 +91,8 @@ impl DBTableTrait for database::DB {
                 })
             }
             Err(e) => {
-                todo!()
+                error!("Unexpected error occured while coutning Items in the Database. Error: {e}");
+                return Err((StatusCode::INTERNAL_SERVER_ERROR, AxumErrors::DBError));
             }
         }
     }

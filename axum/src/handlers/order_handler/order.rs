@@ -27,19 +27,19 @@ pub struct CreateOrdersRequest {
 }
 
 #[derive(Serialize)]
-struct ReturnTableResponse {
-    table: TableResponse,
+pub struct ReturnTableResponse {
+    pub table: TableResponse,
 }
 
 #[derive(Serialize)]
-struct ListTableOrdersResponse {
-    table_id: i64,
-    orders: Vec<OrderResponse>,
+pub struct ListTableOrdersResponse {
+    pub table_id: i64,
+    pub orders: Vec<OrderResponse>,
 }
 
 #[derive(Serialize)]
-struct GetOrderResponse {
-    order: OrderResponse,
+pub struct GetOrderResponse {
+    pub order: OrderResponse,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -59,17 +59,17 @@ pub fn default_vec_strings() -> Vec<String> {
 }
 
 #[derive(Serialize)]
-struct ListOrdersResponse {
-    orders: Vec<OrderResponse>,
-    pagination: ListOrderPaginationResponse,
-    filters: ListOrderFiltersRequest,
+pub struct ListOrdersResponse {
+    pub orders: Vec<OrderResponse>,
+    pub pagination: ListOrderPaginationResponse,
+    pub filters: ListOrderFiltersRequest,
 }
 
 #[derive(Serialize)]
-struct ListOrderPaginationResponse {
-    total: u64,
-    limit: i64,
-    offset: u64,
+pub struct ListOrderPaginationResponse {
+    pub total: u64,
+    pub limit: i64,
+    pub offset: u64,
 }
 
 pub async fn create_order(

@@ -1,14 +1,15 @@
-use std::error::Error;
-
 use async_trait::async_trait;
+use axum::http::StatusCode;
 use chrono::{DateTime, Utc};
 use mongodb::bson::{doc, Document};
 use mongodb::options::ReturnDocument;
 use serde::{Deserialize, Serialize};
+use tracing::error;
 
 use crate::common::database;
 use crate::common::database_helpers::collect_cursor;
 
+use crate::common::errors::AxumErrors;
 use crate::common::models::restaurant_schema::{Item, Order, OrderResponse, Table};
 
 use super::order::ListOrderFiltersRequest;
@@ -33,26 +34,36 @@ pub struct ListOrderResult {
 
 #[async_trait]
 pub trait DBTableTrait {
-    async fn get_table(&self, table_id: &i64) -> Result<Table, Box<dyn Error>>;
+    async fn get_table(&self, table_id: &i64) -> Result<Table, (StatusCode, AxumErrors)>;
     async fn create_orders(
         &self,
         table_id: &i64,
         orders: Vec<Document>,
-    ) -> Result<Table, Box<dyn Error>>;
-    async fn get_item(&self, item_name: String) -> Result<Option<Item>, Box<dyn Error>>;
-    async fn delete_order(&self, table_id: &i64, order_id: &i64) -> Result<Table, Box<dyn Error>>;
-    async fn get_order(&self, table_id: &i64, order_id: &i64) -> Result<Order, Box<dyn Error>>;
-    async fn list_table_orders(&self, table_id: &i64)
-        -> Result<Vec<OrderResponse>, Box<dyn Error>>;
+    ) -> Result<Table, (StatusCode, AxumErrors)>;
+    async fn get_item(&self, item_name: String) -> Result<Option<Item>, (StatusCode, AxumErrors)>;
+    async fn delete_order(
+        &self,
+        table_id: &i64,
+        order_id: &i64,
+    ) -> Result<Table, (StatusCode, AxumErrors)>;
+    async fn get_order(
+        &self,
+        table_id: &i64,
+        order_id: &i64,
+    ) -> Result<Order, (StatusCode, AxumErrors)>;
+    async fn list_table_orders(
+        &self,
+        table_id: &i64,
+    ) -> Result<Vec<OrderResponse>, (StatusCode, AxumErrors)>;
     async fn list_all_orders(
         &self,
         filters: &ListOrderFiltersRequest,
-    ) -> Result<ListOrderResult, Box<dyn Error>>;
+    ) -> Result<ListOrderResult, (StatusCode, AxumErrors)>;
 }
 
 #[async_trait]
 impl DBTableTrait for database::DB {
-    async fn get_item(&self, item_name: String) -> Result<Option<Item>, Box<dyn Error>> {
+    async fn get_item(&self, item_name: String) -> Result<Option<Item>, (StatusCode, AxumErrors)> {
         let item_collection = self
             .db
             .database("item_management")
@@ -65,12 +76,15 @@ impl DBTableTrait for database::DB {
         match item_collection.find_one(filter, None).await {
             Ok(opt_item) => Ok(opt_item),
             Err(e) => {
-                todo!()
+                error!(
+                    "Unexpected error occured while searching for Item in the Database. Error: {e}"
+                );
+                return Err((StatusCode::INTERNAL_SERVER_ERROR, AxumErrors::DBError));
             }
         }
     }
 
-    async fn get_table(&self, table_id: &i64) -> Result<Table, Box<dyn Error>> {
+    async fn get_table(&self, table_id: &i64) -> Result<Table, (StatusCode, AxumErrors)> {
         let table_collection = self
             .db
             .database("table_management")
@@ -84,9 +98,12 @@ impl DBTableTrait for database::DB {
         match table_collection.find_one(filter, None).await {
             Ok(opt_table) => match opt_table {
                 Some(table) => Ok(table),
-                None => todo!(),
+                None => Err((StatusCode::NOT_FOUND, AxumErrors::NotFound)),
             },
-            Err(e) => panic!("{e}"),
+            Err(e) => {
+                error!("Unexpected error occured while searching for Table in the Database. Error: {e}");
+                return Err((StatusCode::INTERNAL_SERVER_ERROR, AxumErrors::DBError));
+            }
         }
     }
 
@@ -94,7 +111,7 @@ impl DBTableTrait for database::DB {
         &self,
         table_id: &i64,
         orders: Vec<Document>,
-    ) -> Result<Table, Box<dyn Error>> {
+    ) -> Result<Table, (StatusCode, AxumErrors)> {
         let table_collection = self
             .db
             .database("table_management")
@@ -122,15 +139,20 @@ impl DBTableTrait for database::DB {
         {
             Ok(opt_table) => match opt_table {
                 Some(table) => Ok(table),
-                None => todo!(),
+                None => Err((StatusCode::NOT_FOUND, AxumErrors::NotFound)),
             },
             Err(e) => {
-                panic!("{e}")
+                error!("Unexpected error occured while inserting Orders for Table in the Database. Error: {e}");
+                Err((StatusCode::INTERNAL_SERVER_ERROR, AxumErrors::DBError))
             }
         }
     }
 
-    async fn delete_order(&self, table_id: &i64, order_id: &i64) -> Result<Table, Box<dyn Error>> {
+    async fn delete_order(
+        &self,
+        table_id: &i64,
+        order_id: &i64,
+    ) -> Result<Table, (StatusCode, AxumErrors)> {
         let table_collection = self
             .db
             .database("table_management")
@@ -159,15 +181,20 @@ impl DBTableTrait for database::DB {
         {
             Ok(opt_table) => match opt_table {
                 Some(table) => Ok(table),
-                None => todo!(),
+                None => Err((StatusCode::NOT_FOUND, AxumErrors::NotFound)),
             },
             Err(e) => {
-                panic!("{e}")
+                error!("Unexpected error occured while Deleting Order for Table in the Database. Error: {e}");
+                Err((StatusCode::INTERNAL_SERVER_ERROR, AxumErrors::DBError))
             }
         }
     }
 
-    async fn get_order(&self, table_id: &i64, order_id: &i64) -> Result<Order, Box<dyn Error>> {
+    async fn get_order(
+        &self,
+        table_id: &i64,
+        order_id: &i64,
+    ) -> Result<Order, (StatusCode, AxumErrors)> {
         let table_collection = self
             .db
             .database("table_management")
@@ -193,15 +220,18 @@ impl DBTableTrait for database::DB {
                         .collect();
                     Ok(order_vec[0].to_owned())
                 }
-                None => todo!(),
+                None => Err((StatusCode::NOT_FOUND, AxumErrors::NotFound)),
             },
-            Err(e) => todo!(),
+            Err(e) => {
+                error!("Unexpected error occured while searching for Order from Table in the Database. Error: {e}");
+                Err((StatusCode::INTERNAL_SERVER_ERROR, AxumErrors::DBError))
+            }
         }
     }
     async fn list_table_orders(
         &self,
         table_id: &i64,
-    ) -> Result<Vec<OrderResponse>, Box<dyn Error>> {
+    ) -> Result<Vec<OrderResponse>, (StatusCode, AxumErrors)> {
         let table_collection = self
             .db
             .database("table_management")
@@ -219,9 +249,12 @@ impl DBTableTrait for database::DB {
                     .into_iter()
                     .map(|order| order.into())
                     .collect::<Vec<OrderResponse>>()),
-                None => todo!(),
+                None => Err((StatusCode::NOT_FOUND, AxumErrors::NotFound)),
             },
-            Err(e) => todo!(),
+            Err(e) => {
+                error!("Unexpected error occured while listing for Order from Table in the Database. Error: {e}");
+                Err((StatusCode::INTERNAL_SERVER_ERROR, AxumErrors::DBError))
+            }
         }
     }
 
@@ -229,7 +262,7 @@ impl DBTableTrait for database::DB {
     async fn list_all_orders(
         &self,
         filters: &ListOrderFiltersRequest,
-    ) -> Result<ListOrderResult, Box<dyn Error>> {
+    ) -> Result<ListOrderResult, (StatusCode, AxumErrors)> {
         let table_collection = self
             .db
             .database("table_management")
@@ -270,8 +303,8 @@ impl DBTableTrait for database::DB {
                 })
             }
             Err(e) => {
-                panic!("{e}");
-                todo!()
+                error!("Unexpected error occured while listing all Orders from Table in the Database. Error: {e}");
+                Err((StatusCode::INTERNAL_SERVER_ERROR, AxumErrors::DBError))
             }
         }
     }

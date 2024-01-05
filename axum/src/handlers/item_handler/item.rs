@@ -1,11 +1,14 @@
 use std::sync::Arc;
 
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use axum::{extract::State, http::StatusCode, Json};
 use axum_extra::extract::Query;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common::models::{pagination_schema::Pagination, restaurant_schema::ItemResponse},
+    common::{
+        errors::AxumErrors,
+        models::{pagination_schema::Pagination, restaurant_schema::ItemResponse},
+    },
     AppState,
 };
 
@@ -22,31 +25,31 @@ pub fn empty_vec_of_strings() -> Vec<String> {
 }
 
 #[derive(Serialize)]
-struct ListItemsResponse {
-    items: Vec<ItemResponse>,
-    pagination: ListItemsPaginationResponse,
-    filters: ListItemsRequest,
-    errors: ListItemsErrorResponse,
+pub struct ListItemsResponse {
+    pub items: Vec<ItemResponse>,
+    pub pagination: ListItemsPaginationResponse,
+    pub filters: ListItemsRequest,
+    pub errors: ListItemsErrorResponse,
 }
 
 #[derive(Serialize)]
-struct ListItemsPaginationResponse {
-    total: u64,
-    limit: i64,
-    offset: u64,
+pub struct ListItemsPaginationResponse {
+    pub total: u64,
+    pub limit: i64,
+    pub offset: u64,
 }
 
 #[derive(Serialize)]
-struct ListItemsErrorResponse {
-    failed_items_ids: Option<Vec<String>>,
-    failed_items_count: u64,
+pub struct ListItemsErrorResponse {
+    pub failed_items_ids: Option<Vec<String>>,
+    pub failed_items_count: u64,
 }
 
 pub async fn list_items(
     State(app_state): State<Arc<AppState>>,
     pagination: Query<Pagination>,
     Query(filters): Query<ListItemsRequest>,
-) -> impl IntoResponse {
+) -> Result<(StatusCode, Json<ListItemsResponse>), (StatusCode, Json<AxumErrors>)> {
     let db = &app_state.db;
 
     let pagination = Pagination {
@@ -55,7 +58,7 @@ pub async fn list_items(
     };
 
     match db.list_items(filters.item_names.clone(), &pagination).await {
-        Ok(list_results) => (
+        Ok(list_results) => Ok((
             StatusCode::OK,
             Json(ListItemsResponse {
                 items: list_results.items,
@@ -70,18 +73,7 @@ pub async fn list_items(
                     failed_items_count: list_results.dropped,
                 },
             }),
-        ),
-        Err(e) => {
-            todo!()
-        }
+        )),
+        Err(e) => Err((e.0, Json(e.1))),
     }
-    // match db.get_order(&table_id, &order_id).await {
-    //     Ok(order) => (
-    //         StatusCode::OK,
-    //         Json(GetOrderResponse {
-    //             order: order.into(),
-    //         }),
-    //     ),
-    //     Err(e) => todo!(),
-    // }
 }

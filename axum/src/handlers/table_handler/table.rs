@@ -17,9 +17,9 @@ use crate::{
 use super::table_db::DBTableTrait;
 
 #[derive(Deserialize, Serialize)]
-struct PostTableResponse {
-    id: String,
-    table: TableResponse,
+pub struct PostTableResponse {
+    pub id: String,
+    pub table: TableResponse,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -36,29 +36,29 @@ pub fn default_vec_strings() -> Vec<String> {
 }
 
 #[derive(Serialize)]
-struct ListTableResponse {
-    tables: Vec<TableResponse>,
-    pagination: ListTablePaginationResponse,
-    filters: ListTableFiltersRequest,
-    errors: ListTableErrorResponse,
+pub struct ListTableResponse {
+    pub tables: Vec<TableResponse>,
+    pub pagination: ListTablePaginationResponse,
+    pub filters: ListTableFiltersRequest,
+    pub errors: ListTableErrorResponse,
 }
 
 #[derive(Serialize)]
-struct ListTablePaginationResponse {
-    total: u64,
-    limit: i64,
-    offset: u64,
+pub struct ListTablePaginationResponse {
+    pub total: u64,
+    pub limit: i64,
+    pub offset: u64,
 }
 
 #[derive(Serialize)]
-struct ListTableErrorResponse {
-    failed_table_ids: Option<Vec<String>>,
-    failed_table_count: u64,
+pub struct ListTableErrorResponse {
+    pub failed_table_ids: Option<Vec<String>>,
+    pub failed_table_count: u64,
 }
 
 #[derive(Serialize)]
-struct DeleteTableResponse {
-    table: TableResponse,
+pub struct DeleteTableResponse {
+    pub table: TableResponse,
 }
 
 pub async fn create_table(State(app_state): State<Arc<AppState>>) -> impl IntoResponse {
