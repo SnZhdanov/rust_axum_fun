@@ -40,7 +40,7 @@ async fn main() {
     match db.set_up_item_records().await {
         Ok(_) => (),
         Err(e) => {
-            todo!()
+            panic!("unexpected error occurred during initializing the db! Error: {e}")
         }
     };
 

@@ -3,7 +3,6 @@ use std::sync::Arc;
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
-    response::IntoResponse,
     Json,
 };
 use axum_extra::extract::Query as ExtraQuery;
@@ -11,12 +10,16 @@ use axum_extra::extract::Query as ExtraQuery;
 use chrono::Utc;
 
 use serde::{Deserialize, Serialize};
+use tracing::error;
 
-use super::order_db::DBTableTrait;
+use super::order_db::DBOrderTrait;
 use crate::{
-    common::models::{
-        pagination_schema::Pagination,
-        restaurant_schema::{CookStatus, Order, OrderResponse, TableResponse},
+    common::{
+        errors::{AxumErrorResponse, AxumErrors},
+        models::{
+            pagination_schema::Pagination,
+            restaurant_schema::{CookStatus, Order, OrderResponse, TableResponse},
+        },
     },
     AppState,
 };
@@ -27,19 +30,19 @@ pub struct CreateOrdersRequest {
 }
 
 #[derive(Serialize)]
-struct ReturnTableResponse {
-    table: TableResponse,
+pub struct ReturnTableResponse {
+    pub table: TableResponse,
 }
 
 #[derive(Serialize)]
-struct ListTableOrdersResponse {
-    table_id: i64,
-    orders: Vec<OrderResponse>,
+pub struct ListTableOrdersResponse {
+    pub table_id: i64,
+    pub orders: Vec<OrderResponse>,
 }
 
 #[derive(Serialize)]
-struct GetOrderResponse {
-    order: OrderResponse,
+pub struct GetOrderResponse {
+    pub order: OrderResponse,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -59,32 +62,32 @@ pub fn default_vec_strings() -> Vec<String> {
 }
 
 #[derive(Serialize)]
-struct ListOrdersResponse {
-    orders: Vec<OrderResponse>,
-    pagination: ListOrderPaginationResponse,
-    filters: ListOrderFiltersRequest,
+pub struct ListOrdersResponse {
+    pub orders: Vec<OrderResponse>,
+    pub pagination: ListOrderPaginationResponse,
+    pub filters: ListOrderFiltersRequest,
 }
 
 #[derive(Serialize)]
-struct ListOrderPaginationResponse {
-    total: u64,
-    limit: i64,
-    offset: u64,
+pub struct ListOrderPaginationResponse {
+    pub total: u64,
+    pub limit: i64,
+    pub offset: u64,
 }
 
 pub async fn create_order(
     State(app_state): State<Arc<AppState>>,
     Path(table_id): Path<i64>,
     Json(create_order_request): Json<CreateOrdersRequest>,
-) -> impl IntoResponse {
+) -> Result<(StatusCode, Json<ReturnTableResponse>), (StatusCode, Json<AxumErrorResponse>)> {
     let db = &app_state.db;
     let mut order_id = app_state.orders.lock().await;
 
     //validate that the table exists
-    match db.get_table(&table_id).await {
+    match db.get_table_order(&table_id).await {
         Ok(table) => table,
         Err(e) => {
-            todo!();
+            return Err(e.to_axum_error());
         }
     };
 
@@ -93,7 +96,7 @@ pub async fn create_order(
     for item_name in create_order_request.orders.into_iter() {
         let item = match db.get_item(item_name).await {
             Ok(opt_item) => opt_item,
-            Err(e) => todo!(),
+            Err(e) => return Err(e.to_axum_error()),
         };
         match item {
             Some(item) => {
@@ -107,7 +110,13 @@ pub async fn create_order(
                 };
                 match mongodb::bson::to_document(&order) {
                     Ok(document) => order_docs.push(document),
-                    Err(e) => panic!("something didn't work!"),
+                    Err(e) => {
+                        error!("unexpected error occured while converting orders into documents! Error: {e}");
+                        return Err((
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            Json(AxumErrors::BsonSerializeError.into()),
+                        ));
+                    }
                 }
             }
             None => continue,
@@ -116,30 +125,30 @@ pub async fn create_order(
 
     //insert the order into the table
     match db.create_orders(&table_id, order_docs).await {
-        Ok(table) => (
+        Ok(table) => Ok((
             StatusCode::OK,
             Json(ReturnTableResponse {
                 table: table.into(),
             }),
-        ),
-        Err(e) => todo!(),
+        )),
+        Err(e) => Err(e.to_axum_error()),
     }
 }
 
 pub async fn get_order(
     State(app_state): State<Arc<AppState>>,
     Path((table_id, order_id)): Path<(i64, i64)>,
-) -> impl IntoResponse {
+) -> Result<(StatusCode, Json<GetOrderResponse>), (StatusCode, Json<AxumErrorResponse>)> {
     let db = &app_state.db;
 
     match db.get_order(&table_id, &order_id).await {
-        Ok(order) => (
+        Ok(order) => Ok((
             StatusCode::OK,
             Json(GetOrderResponse {
                 order: order.into(),
             }),
-        ),
-        Err(e) => todo!(),
+        )),
+        Err(e) => Err(e.to_axum_error()),
     }
 }
 
@@ -147,7 +156,7 @@ pub async fn list_all_orders(
     State(app_state): State<Arc<AppState>>,
     pagination: Query<Pagination>,
     filters: ExtraQuery<ListOrderFiltersRequest>,
-) -> impl IntoResponse {
+) -> Result<(StatusCode, Json<ListOrdersResponse>), (StatusCode, Json<AxumErrorResponse>)> {
     let db = &app_state.db;
 
     let pagination = Pagination {
@@ -174,7 +183,7 @@ pub async fn list_all_orders(
             //now handle pagination since it does nothing right now.
 
             list_order_result.orders = handle_pagination(list_order_result.orders, &pagination);
-            (
+            Ok((
                 StatusCode::OK,
                 Json(ListOrdersResponse {
                     orders: list_order_result.orders,
@@ -185,28 +194,26 @@ pub async fn list_all_orders(
                     },
                     filters,
                 }),
-            )
+            ))
         }
-        Err(e) => {
-            todo!();
-        }
+        Err(e) => Err(e.to_axum_error()),
     }
 }
 
 pub async fn delete_order(
     State(app_state): State<Arc<AppState>>,
     Path((table_id, order_id)): Path<(i64, i64)>,
-) -> impl IntoResponse {
+) -> Result<(StatusCode, Json<ReturnTableResponse>), (StatusCode, Json<AxumErrorResponse>)> {
     let db = &app_state.db;
 
     match db.delete_order(&table_id, &order_id).await {
-        Ok(table) => (
+        Ok(table) => Ok((
             StatusCode::OK,
             Json(ReturnTableResponse {
                 table: table.into(),
             }),
-        ),
-        Err(e) => todo!(),
+        )),
+        Err(e) => Err(e.to_axum_error()),
     }
 }
 

@@ -4,15 +4,16 @@ use mongodb::bson::doc;
 use mongodb::bson::Document;
 use mongodb::bson::Regex;
 use serde::{Deserialize, Serialize};
-//use futures::TryStreamExt;
-use std::error::Error;
+use tracing::error;
 
 use crate::common::database;
 use crate::common::database_helpers::collect_cursor;
+use crate::common::errors::AxumErrors;
+use crate::common::errors::ErrorResponse;
 use crate::common::models::pagination_schema::Pagination;
 use crate::common::models::restaurant_schema::{Table, TableResponse};
-
 use crate::table_handler::table::ListTableFiltersRequest;
+use axum::http::StatusCode;
 #[derive(Serialize, Deserialize)]
 pub struct ListTablesResult {
     pub tables: Vec<TableResponse>,
@@ -87,20 +88,21 @@ impl From<ListTableFiltersRequest> for ListTableFiltersBson {
 
 #[async_trait]
 pub trait DBTableTrait {
-    async fn create_table(&self, table: &Table) -> Result<Table, Box<dyn Error>>;
-    async fn get_table(&self, table_id: i64) -> Result<Table, Box<dyn Error>>;
+    async fn create_table(&self, table: &Table) -> Result<Table, ErrorResponse>;
+    async fn get_table(&self, table_id: i64) -> Result<Table, ErrorResponse>;
     async fn list_tables(
         &self,
         pagination: &Pagination,
         filters: ListTableFiltersRequest,
-    ) -> Result<ListTablesResult, Box<dyn Error>>;
-    async fn delete_table(&self, table_id: i64) -> Result<TableResponse, Box<dyn Error>>;
+    ) -> Result<ListTablesResult, ErrorResponse>;
+    async fn delete_table(&self, table_id: i64) -> Result<TableResponse, ErrorResponse>;
 }
 
+#[faux::methods]
 #[async_trait]
 impl DBTableTrait for database::DB {
     //this function is going to need session manager
-    async fn create_table(&self, table: &Table) -> Result<Table, Box<dyn Error>> {
+    async fn create_table(&self, table: &Table) -> Result<Table, ErrorResponse> {
         let table_collection = self
             .db
             .database("table_management")
@@ -117,7 +119,13 @@ impl DBTableTrait for database::DB {
                 Some(table) => return Ok(table.into()),
                 None => (),
             },
-            Err(e) => panic!("{e}"),
+            Err(e) => {
+                error!("Unexpected error occured while searching for the Table in the Database. Error: {e}");
+                return Err(ErrorResponse {
+                    status_code: StatusCode::INTERNAL_SERVER_ERROR,
+                    error: AxumErrors::DBError.into(),
+                });
+            }
         };
 
         // let table_as_bson = mongodb::bson::to_document(table).unwrap();
@@ -125,12 +133,15 @@ impl DBTableTrait for database::DB {
         match table_collection.insert_one(table, None).await {
             Ok(_) => Ok(table.clone().into()),
             Err(e) => {
-                // I want to eventually be able to handle errors gracefully here
-                todo!()
+                error!("Unexpected error occured while inserting the Table into the Database. Error: {e}");
+                return Err(ErrorResponse {
+                    status_code: StatusCode::INTERNAL_SERVER_ERROR,
+                    error: AxumErrors::DBError.into(),
+                });
             }
         }
     }
-    async fn get_table(&self, table_id: i64) -> Result<Table, Box<dyn Error>> {
+    async fn get_table(&self, table_id: i64) -> Result<Table, ErrorResponse> {
         let table_collection = self
             .db
             .database("table_management")
@@ -143,11 +154,19 @@ impl DBTableTrait for database::DB {
         match table_collection.find_one(filter, None).await {
             Ok(opt_table) => match opt_table {
                 Some(table) => Ok(table),
-                None => todo!(), //no record found!
+                None => {
+                    return Err(ErrorResponse {
+                        status_code: StatusCode::NOT_FOUND,
+                        error: AxumErrors::NotFound.into(),
+                    });
+                }
             },
             Err(e) => {
-                // I want to eventually be able to handle errors gracefully here
-                todo!()
+                error!("Unexpected error occured while finding the Table from the Database. Error: {e}");
+                return Err(ErrorResponse {
+                    status_code: StatusCode::INTERNAL_SERVER_ERROR,
+                    error: AxumErrors::DBError.into(),
+                });
             }
         }
     }
@@ -156,7 +175,7 @@ impl DBTableTrait for database::DB {
         &self,
         pagination: &Pagination,
         filters: ListTableFiltersRequest,
-    ) -> Result<ListTablesResult, Box<dyn Error>> {
+    ) -> Result<ListTablesResult, ErrorResponse> {
         let table_collection = self
             .db
             .database("table_management")
@@ -172,7 +191,11 @@ impl DBTableTrait for database::DB {
         let filter: Document = match mongodb::bson::to_document(&filters_as_bson) {
             Ok(document) => document,
             Err(e) => {
-                todo!()
+                error!("Unexpected error occured while deserializing the document! Error: {e}");
+                return Err(ErrorResponse {
+                    status_code: StatusCode::INTERNAL_SERVER_ERROR,
+                    error: AxumErrors::BsonSerializeError.into(),
+                });
             }
         };
 
@@ -183,15 +206,27 @@ impl DBTableTrait for database::DB {
             .await
         {
             Ok(count) => count,
-            Err(e) => todo!(),
+            Err(e) => {
+                error!("Unexpected error occured while coutning the Tables from the Database. Error: {e}");
+                return Err(ErrorResponse {
+                    status_code: StatusCode::INTERNAL_SERVER_ERROR,
+                    error: AxumErrors::DBError.into(),
+                });
+            }
         };
 
         match table_collection.find(filter, find_options).await {
             Ok(cursor) => {
                 let (tables, failed_tables, dropped) =
-                    collect_cursor::<Table, TableResponse>(cursor)
-                        .await
-                        .get_results();
+                    match collect_cursor::<Table, TableResponse>(cursor).await {
+                        Ok(collect_cursor_result) => collect_cursor_result.get_results(),
+                        Err(e) => {
+                            return Err(ErrorResponse {
+                                status_code: StatusCode::INTERNAL_SERVER_ERROR,
+                                error: e.into(),
+                            })
+                        }
+                    };
 
                 Ok(ListTablesResult {
                     tables,
@@ -204,12 +239,15 @@ impl DBTableTrait for database::DB {
                 })
             }
             Err(e) => {
-                // I want to eventually be able to handle errors gracefully here
-                todo!()
+                error!("Unexpected error occured while Listing the Tables from the Database. Error: {e}");
+                return Err(ErrorResponse {
+                    status_code: StatusCode::INTERNAL_SERVER_ERROR,
+                    error: AxumErrors::DBError.into(),
+                });
             }
         }
     }
-    async fn delete_table(&self, table_id: i64) -> Result<TableResponse, Box<dyn Error>> {
+    async fn delete_table(&self, table_id: i64) -> Result<TableResponse, ErrorResponse> {
         let table_collection = self
             .db
             .database("table_management")
@@ -223,17 +261,31 @@ impl DBTableTrait for database::DB {
         let table = match table_collection.find_one(filter.clone(), None).await {
             Ok(opt_table) => match opt_table {
                 Some(table) => table,
-                None => todo!(), //no record found!
+                None => {
+                    return Err(ErrorResponse {
+                        status_code: StatusCode::NOT_FOUND,
+                        error: AxumErrors::NotFound.into(),
+                    })
+                }
             },
             Err(e) => {
-                // I want to eventually be able to handle errors gracefully here
-                todo!()
+                error!("Unexpected error occured while searching the Table to delete from the Database. Error: {e}");
+                return Err(ErrorResponse {
+                    status_code: StatusCode::INTERNAL_SERVER_ERROR,
+                    error: AxumErrors::DBError.into(),
+                });
             }
         };
 
         match table_collection.delete_one(filter, None).await {
             Ok(_) => Ok(table.into()),
-            Err(e) => todo!(),
+            Err(e) => {
+                error!("Unexpected error occured while Deleting the Table from the Database. Error: {e}");
+                Err(ErrorResponse {
+                    status_code: StatusCode::INTERNAL_SERVER_ERROR,
+                    error: AxumErrors::DBError.into(),
+                })
+            }
         }
     }
 }

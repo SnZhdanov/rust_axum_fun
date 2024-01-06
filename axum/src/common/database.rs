@@ -6,6 +6,7 @@ use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use serde_json::Value;
 use std::{error::Error, fs, time::Duration};
 
+#[faux::create]
 #[derive(Clone)]
 pub struct DB {
     pub db: Client,
@@ -19,15 +20,16 @@ pub trait DBTrait {
     async fn set_up_item_records(&self) -> Result<(), Box<dyn Error>>;
 }
 
+#[faux::methods]
 #[async_trait]
 impl DBTrait for DB {
     async fn init() -> Result<Self, Box<dyn Error>> {
         let connection_string: String =
-            std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-        let access_key: String =
-            std::env::var("MONGO_INITDB_ROOT_USERNAME").unwrap_or("".to_string());
-        let secret_key: String =
-            std::env::var("MONGO_INITDB_ROOT_PASSWORD").unwrap_or("".to_string());
+            std::env::var("DATABASE_URL").expect("DATABASE_URL env var must be set!");
+        let access_key: String = std::env::var("MONGO_INITDB_ROOT_USERNAME")
+            .unwrap_or("MONGO_INITDB_ROOT_USERNAME env var must be set!".to_string());
+        let secret_key: String = std::env::var("MONGO_INITDB_ROOT_PASSWORD")
+            .unwrap_or("MONGO_INITDB_ROOT_PASSWORD env var must be set!".to_string());
 
         let connection_string = connection_string
             .replace("<MONGO_INITDB_ROOT_USERNAME>", access_key.as_str())
@@ -74,20 +76,23 @@ impl DBTrait for DB {
                 }
             }
             Err(e) => {
-                panic!("unexpected error finding the records: {e}")
+                panic!("unexpected error finding the records  when populating the DB: {e}")
                 //drop all the records
             }
         };
 
-        let file = fs::File::open("./axum/src/common/item_records.json").expect("File not found!");
+        let file = fs::File::open("./axum/src/common/item_records.json")
+            .expect("File for pre-loading the DB not found!");
 
-        let json: Value = serde_json::from_reader(file).expect("Was unable to read the file!");
+        let json: Value = serde_json::from_reader(file)
+            .expect("Was unable to read the file for pre-loading the DB!");
 
         let records_arr: Vec<Item> = match json.get("records") {
-            Some(records) => {
-                serde_json::from_value(records.clone()).expect("unable to parse the item records!")
-            }
-            None => panic!("Was unable to find the record's key!"),
+            Some(records) => serde_json::from_value(records.clone())
+                .expect("unable to parse the item records in the file for pre-loading the DB!"),
+            None => panic!(
+                "Was unable to find the record's key. Check the file for pre-loading the DB!"
+            ),
         };
 
         match item_collection.insert_many(records_arr, None).await {

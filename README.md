@@ -42,7 +42,7 @@ Again, if this were a real production environment and I were using MongoDB, I wo
 - [] Axum setup
     - [] dockerize axum
     - [] dockerize rust
-- [] Crud for Tables
+- [x] Crud for Tables
     - [x] create
         - [x] idpotent
         - [x] insert
@@ -59,7 +59,7 @@ Again, if this were a real production environment and I were using MongoDB, I wo
         - [] sort -- STRETCH
     - [x]delete
     - [] update -- STRETCH
-- [] Crud for Orders
+- [x] Crud for Orders
     - [x] create
     - [x] get
     - [x] list
@@ -80,8 +80,14 @@ Again, if this were a real production environment and I were using MongoDB, I wo
         - [] sort -- STRETCH
 - Error Handling
     - [] Tables
-    - [] Orders
+        - [] tables
+        - [] tables_db //// Needs status codes
+    - [x] Orders
+        - [] order
+        - [x] order_db
     - [] Items 
+        - [x] item
+        - [x] items_db
 - Unit Tests
     - Tables
         - [] handlers

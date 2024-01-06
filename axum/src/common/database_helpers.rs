@@ -3,6 +3,9 @@ use mongodb::bson::Document;
 use mongodb::Cursor;
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
+use tracing::error;
+
+use super::errors::AxumErrors;
 
 pub struct CollectCusrorResult<BsonStruct> {
     successfully_deserialized: Vec<BsonStruct>,
@@ -25,7 +28,7 @@ where
 
 pub async fn collect_cursor<JsonStruct, BsonStruct>(
     cursor: Cursor<Document>,
-) -> CollectCusrorResult<BsonStruct>
+) -> Result<CollectCusrorResult<BsonStruct>, AxumErrors>
 where
     BsonStruct: Clone,
     BsonStruct: DeserializeOwned,
@@ -37,24 +40,21 @@ where
 {
     let documents: Vec<Document> = match cursor.try_collect().await {
         Ok(docs) => docs,
-        Err(e) => todo!(),
+        Err(e) => {
+            error!("Was unable to deserialize the cursor into documents! Error:{e}");
+            return Err(AxumErrors::BsonDeserializeError);
+        }
     };
 
-    println!("the documents {:?} \n\n", documents.clone());
     let mut dropped: u64 = 0;
     let mut successfully_deserialized: Vec<BsonStruct> = [].to_vec();
     let mut failed_deserialized: Vec<String> = [].to_vec();
     for doc in documents.into_iter() {
-        println!("the document: {:?}\n", doc.clone());
         let deserialized: BsonStruct = match mongodb::bson::from_document::<JsonStruct>(doc.clone())
         {
-            Ok(deserialized) => {
-                println!(" json form {:?}", deserialized);
-                let y = deserialized.into();
-                println!("response form {:?}", y);
-                y
-            }
+            Ok(deserialized) => deserialized.into(),
             Err(e) => {
+                error!("Was unable to deserialize the Document into the provided type! Error:{e}");
                 dropped += 1;
 
                 match doc.get("_id") {
@@ -67,9 +67,9 @@ where
 
         successfully_deserialized.push(deserialized)
     }
-    CollectCusrorResult {
+    Ok(CollectCusrorResult {
         successfully_deserialized,
         failed_deserialized,
         dropped,
-    }
+    })
 }
