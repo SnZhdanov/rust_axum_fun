@@ -26,6 +26,19 @@ pub enum AxumErrors {
     BsonDeserializeError,
 }
 
+impl ToString for AxumErrors {
+    fn to_string(&self) -> String {
+        match self {
+            AxumErrors::NotFound => "NotFound".into(),
+            AxumErrors::SerializationError => "SerializationError".into(),
+            AxumErrors::DeserializationError => "DeserializationError".into(),
+            AxumErrors::DBError => "DBError".into(),
+            AxumErrors::BsonSerializeError => "BsonSerializeError".into(),
+            AxumErrors::BsonDeserializeError => "BsonDeserializeError".into(),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct AxumErrorResponse {
     pub error_type: String,
@@ -36,28 +49,28 @@ impl From<AxumErrors> for AxumErrorResponse {
     fn from(axum_errors: AxumErrors) -> Self {
         match axum_errors {
             AxumErrors::NotFound => Self {
-                error_type: "NotFound".to_string(),
+                error_type: AxumErrors::NotFound.to_string(),
                 error_message: "Document Was Not Found!".to_string(),
             },
             AxumErrors::SerializationError => Self {
-                error_type: "SerializationError".to_string(),
+                error_type: AxumErrors::SerializationError.to_string(),
                 error_message: "Serde Serialization Error Occurred!".to_string(),
             },
             AxumErrors::DeserializationError => Self {
-                error_type: "DeserializationError".to_string(),
+                error_type: AxumErrors::DeserializationError.to_string(),
                 error_message: "Serde Deserialization Error Occurred!".to_string(),
             },
             AxumErrors::DBError => Self {
-                error_type: "DBError".to_string(),
+                error_type: AxumErrors::DBError.to_string(),
                 error_message: "Unexpected Error response from MongoDB!".to_string(),
             },
             AxumErrors::BsonSerializeError => Self {
-                error_type: "BsonSerializeError".to_string(),
+                error_type: AxumErrors::BsonSerializeError.to_string(),
                 error_message: "Unexpected error from serializing struct into Bson Document!"
                     .to_string(),
             },
             AxumErrors::BsonDeserializeError => Self {
-                error_type: "BsonDeserializeError".to_string(),
+                error_type: AxumErrors::BsonDeserializeError.to_string(),
                 error_message: "Unexpected error from deserializing struct into Bson Document!"
                     .to_string(),
             },

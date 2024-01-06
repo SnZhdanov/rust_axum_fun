@@ -14,7 +14,7 @@ use crate::common::{
     },
 };
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ListItemResults {
     pub items: Vec<ItemResponse>,
     pub failed_items: Option<Vec<String>>,

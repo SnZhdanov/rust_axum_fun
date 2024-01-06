@@ -46,6 +46,7 @@ Again, if this were a real production environment and I were using MongoDB, I wo
     - [x] create
         - [x] idpotent
         - [x] insert
+        - [] You should be able to create Orders on POST -- Stretch
     - [x] get
     - [x] list
         - [x] filter
@@ -54,14 +55,14 @@ Again, if this were a real production environment and I were using MongoDB, I wo
             - [x] order_id
             - [x] item_name fuzzy check
             - [x] list of item_names
-            - [] order status -- STRETCH
         - [x] pagination
         - [] sort -- STRETCH
-    - [x]delete
+    - [x] delete
     - [] update -- STRETCH
 - [x] Crud for Orders
     - [x] create
     - [x] get
+    - [] /table/1/order should output the table's order-- Stretch
     - [x] list
         - [x] filters
             - [x] no filters
@@ -71,7 +72,7 @@ Again, if this were a real production environment and I were using MongoDB, I wo
         - [] sort -- STRETCH
     - [x] delete
     - [] update  -- STRETCH
-- [] Crud for Items
+- [x] Crud for Items
     - [x] list
         - [x] filters
             - [x] no filters
@@ -79,26 +80,27 @@ Again, if this were a real production environment and I were using MongoDB, I wo
         - [x] pagination    
         - [] sort -- STRETCH
 - Error Handling
-    - [] Tables
-        - [] tables
-        - [] tables_db //// Needs status codes
+    - [x] Tables
+        - [x] tables
+        - [x] tables_db
     - [x] Orders
-        - [] order
+        - [x] order
         - [x] order_db
-    - [] Items 
+    - [x] Items 
         - [x] item
         - [x] items_db
 - Unit Tests
     - Tables
-        - [] handlers
+        - [x] handlers
     - Orders
-        - [] handlers
+        - [x] handlers
     - Items
-        - [] handlers 
+        - [x] handlers 
+- Live Testing
+    - [] todo
 - [] Integration Tests???  -- STRETCH
     - Tables
         - [] handlers
     - Orders
         - [] handlers
-- Live Testing
-    - [] todo
+

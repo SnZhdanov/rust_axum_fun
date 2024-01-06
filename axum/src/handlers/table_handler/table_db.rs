@@ -14,7 +14,7 @@ use crate::common::models::pagination_schema::Pagination;
 use crate::common::models::restaurant_schema::{Table, TableResponse};
 use crate::table_handler::table::ListTableFiltersRequest;
 use axum::http::StatusCode;
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ListTablesResult {
     pub tables: Vec<TableResponse>,
     pub failed_tables: Option<Vec<String>>,
