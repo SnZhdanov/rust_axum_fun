@@ -24,7 +24,7 @@ pub struct Dat {
     ordered_time: DateTime<Utc>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct ListOrderResult {
     pub orders: Vec<OrderResponse>,
     pub failed_orders: Option<Vec<String>>,

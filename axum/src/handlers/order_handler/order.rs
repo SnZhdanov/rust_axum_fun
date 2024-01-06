@@ -126,7 +126,7 @@ pub async fn create_order(
     //insert the order into the table
     match db.create_orders(&table_id, order_docs).await {
         Ok(table) => Ok((
-            StatusCode::OK,
+            StatusCode::CREATED,
             Json(ReturnTableResponse {
                 table: table.into(),
             }),
