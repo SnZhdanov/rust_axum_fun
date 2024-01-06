@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use axum::{extract::Path, extract::Query, extract::State, http::StatusCode, Json};
 use axum_extra::extract::Query as ExtraQuery;
+
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -9,7 +11,7 @@ use crate::{
         errors::AxumErrorResponse,
         models::{
             pagination_schema::Pagination,
-            restaurant_schema::{Table, TableResponse},
+            restaurant_schema::{CookStatus, Order, Table, TableResponse},
         },
     },
     AppState,
@@ -36,7 +38,7 @@ pub fn default_vec_strings() -> Vec<String> {
     vec![]
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct ListTableResponse {
     pub tables: Vec<TableResponse>,
     pub pagination: ListTablePaginationResponse,
@@ -44,45 +46,81 @@ pub struct ListTableResponse {
     pub errors: ListTableErrorResponse,
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct ListTablePaginationResponse {
     pub total: u64,
     pub limit: i64,
     pub offset: u64,
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct ListTableErrorResponse {
     pub failed_table_ids: Option<Vec<String>>,
     pub failed_table_count: u64,
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct DeleteTableResponse {
     pub table: TableResponse,
 }
 
+#[derive(Deserialize, Serialize)]
+pub struct CreateTableOrdersRequest {
+    #[serde(default = "default_vec_strings")]
+    pub orders: Vec<String>,
+}
+
 pub async fn create_table(
     State(app_state): State<Arc<AppState>>,
+    Json(create_order_request): Json<CreateTableOrdersRequest>,
 ) -> Result<(StatusCode, Json<PostTableResponse>), (StatusCode, Json<AxumErrorResponse>)> {
-    let mut tables = app_state.tables.lock().await;
+    let mut table_id = app_state.tables.lock().await;
+    let mut order_id = app_state.orders.lock().await;
+
     let db = &app_state.db;
-    *tables += 1;
+
+    let mut order_added_counter = 0;
+    let mut orders: Vec<Order> = [].to_vec();
+
+    //if items are inside the order, then let's get the item and custom make orders
+    for item_name in create_order_request.orders.into_iter() {
+        let item = match db.get_item_table(item_name).await {
+            Ok(opt_item) => opt_item,
+            Err(e) => return Err(e.to_axum_error()),
+        };
+        match item {
+            Some(item) => {
+                order_added_counter += 1;
+                orders.push(Order {
+                    order_id: *order_id + order_added_counter,
+                    table_id: *table_id + 1,
+                    ordered_time: Utc::now(),
+                    cook_status: CookStatus::InProgress,
+                    item,
+                })
+            }
+            None => continue,
+        }
+    }
 
     let table = Table {
         id: mongodb::bson::oid::ObjectId::new().to_hex(),
-        table_id: *tables,
-        orders: vec![].into(),
+        table_id: *table_id + 1,
+        orders,
     };
 
     match db.create_table(&table).await {
-        Ok(_) => Ok((
-            StatusCode::CREATED,
-            Json(PostTableResponse {
-                id: table.id.clone(),
-                table: table.into(),
-            }),
-        )),
+        Ok(_) => {
+            *table_id += 1;
+            *order_id += order_added_counter;
+            Ok((
+                StatusCode::CREATED,
+                Json(PostTableResponse {
+                    id: table.id.clone(),
+                    table: table.into(),
+                }),
+            ))
+        }
         Err(e) => Err(e.to_axum_error()),
     }
 }

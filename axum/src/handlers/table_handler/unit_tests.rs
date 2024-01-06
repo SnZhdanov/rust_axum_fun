@@ -6,8 +6,10 @@ pub mod table_unit_tests {
     use axum::{
         extract::{Path, Query, State},
         http::StatusCode,
+        Json,
     };
     use axum_extra::extract::Query as ExtraQuery;
+    use chrono::Utc;
     use mongodb::bson::oid::ObjectId;
     use tokio::sync::Mutex;
 
@@ -17,11 +19,14 @@ pub mod table_unit_tests {
             errors::{AxumErrors, ErrorResponse},
             models::{
                 pagination_schema::Pagination,
-                restaurant_schema::{Table, TableResponse},
+                restaurant_schema::{CookStatus, Item, Order, Table, TableResponse},
             },
         },
         handlers::table_handler::{
-            table::{create_table, delete_table, get_table, list_table, ListTableFiltersRequest},
+            table::{
+                create_table, delete_table, get_table, list_table, CreateTableOrdersRequest,
+                ListTableFiltersRequest,
+            },
             table_db::ListTablesResult,
         },
         AppState,
@@ -34,11 +39,24 @@ pub mod table_unit_tests {
     #[tokio::test]
     pub async fn successful_create() {
         let mut mock_db = DB::faux();
+        let item = Item {
+            item_name: "Unagi".to_string(),
+            cook_time: 10,
+        };
         let table = Table {
             id: ObjectId::new().to_hex(),
             table_id: 1,
-            orders: [].to_vec(),
+            orders: [Order {
+                order_id: 1,
+                table_id: 1,
+                ordered_time: Utc::now(),
+                cook_status: CookStatus::InProgress,
+                item: item.clone(),
+            }]
+            .to_vec(),
         };
+
+        faux::when!(mock_db.get_item_table).then(move |_| Ok(Some(item.to_owned())));
         faux::when!(mock_db.create_table).then(move |_| Ok(table.to_owned()));
 
         let app_state = Arc::new(AppState {
@@ -47,8 +65,10 @@ pub mod table_unit_tests {
             db: mock_db.clone(),
         });
         let state = State(app_state);
-
-        match create_table(state).await {
+        let body = Json(CreateTableOrdersRequest {
+            orders: ["Unagi".to_string()].to_vec(),
+        });
+        match create_table(state, body).await {
             Ok(resp) => {
                 assert_eq!(resp.0, StatusCode::CREATED);
             }
@@ -73,8 +93,10 @@ pub mod table_unit_tests {
             db: mock_db.clone(),
         });
         let state = State(app_state);
-
-        match create_table(state).await {
+        let body = Json(CreateTableOrdersRequest {
+            orders: [].to_vec(),
+        });
+        match create_table(state, body).await {
             Ok(_) => panic!("supposed to fail"),
             Err(e) => {
                 assert_eq!(e.1.error_type, AxumErrors::DBError.to_string());

@@ -24,12 +24,12 @@ use crate::{
     AppState,
 };
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct CreateOrdersRequest {
     pub orders: Vec<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct ReturnTableResponse {
     pub table: TableResponse,
 }
@@ -61,14 +61,14 @@ pub fn default_vec_strings() -> Vec<String> {
     vec![]
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct ListOrdersResponse {
     pub orders: Vec<OrderResponse>,
     pub pagination: ListOrderPaginationResponse,
     pub filters: ListOrderFiltersRequest,
 }
 
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct ListOrderPaginationResponse {
     pub total: u64,
     pub limit: i64,
