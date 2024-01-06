@@ -1,7 +1,5 @@
 #[cfg(test)]
 pub mod integration_tests {
-    use std::{thread, time::Duration};
-
     use serde::{Deserialize, Serialize};
 
     #[derive(Serialize, Deserialize, Debug)]

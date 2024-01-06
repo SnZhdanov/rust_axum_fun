@@ -1,5 +1,17 @@
-use axum::{http::StatusCode, response::IntoResponse};
+use axum::{http::StatusCode, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
+
+pub struct ErrorResponse {
+    pub status_code: StatusCode,
+    pub error: AxumErrorResponse,
+}
+
+impl ErrorResponse {
+    pub fn to_axum_error(self) -> (StatusCode, Json<AxumErrorResponse>) {
+        (self.status_code, Json(self.error))
+    }
+}
+
 pub async fn handler_404() -> impl IntoResponse {
     (StatusCode::NOT_FOUND, "Path not found!")
 }
@@ -11,15 +23,16 @@ pub enum AxumErrors {
     DeserializationError,
     DBError,
     BsonSerializeError,
+    BsonDeserializeError,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct AxumErrorRespone {
+pub struct AxumErrorResponse {
     pub error_type: String,
     pub error_message: String,
 }
 
-impl From<AxumErrors> for AxumErrorRespone {
+impl From<AxumErrors> for AxumErrorResponse {
     fn from(axum_errors: AxumErrors) -> Self {
         match axum_errors {
             AxumErrors::NotFound => Self {
@@ -40,6 +53,11 @@ impl From<AxumErrors> for AxumErrorRespone {
             },
             AxumErrors::BsonSerializeError => Self {
                 error_type: "BsonSerializeError".to_string(),
+                error_message: "Unexpected error from serializing struct into Bson Document!"
+                    .to_string(),
+            },
+            AxumErrors::BsonDeserializeError => Self {
+                error_type: "BsonDeserializeError".to_string(),
                 error_message: "Unexpected error from deserializing struct into Bson Document!"
                     .to_string(),
             },

@@ -1,15 +1,16 @@
 use std::sync::Arc;
 
-use axum::{
-    extract::Path, extract::Query, extract::State, http::StatusCode, response::IntoResponse, Json,
-};
+use axum::{extract::Path, extract::Query, extract::State, http::StatusCode, Json};
 use axum_extra::extract::Query as ExtraQuery;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    common::models::{
-        pagination_schema::Pagination,
-        restaurant_schema::{Table, TableResponse},
+    common::{
+        errors::AxumErrorResponse,
+        models::{
+            pagination_schema::Pagination,
+            restaurant_schema::{Table, TableResponse},
+        },
     },
     AppState,
 };
@@ -61,7 +62,9 @@ pub struct DeleteTableResponse {
     pub table: TableResponse,
 }
 
-pub async fn create_table(State(app_state): State<Arc<AppState>>) -> impl IntoResponse {
+pub async fn create_table(
+    State(app_state): State<Arc<AppState>>,
+) -> Result<(StatusCode, Json<PostTableResponse>), (StatusCode, Json<AxumErrorResponse>)> {
     let mut tables = app_state.tables.lock().await;
     let db = &app_state.db;
     *tables += 1;
@@ -73,16 +76,14 @@ pub async fn create_table(State(app_state): State<Arc<AppState>>) -> impl IntoRe
     };
 
     match db.create_table(&table).await {
-        Ok(_) => (
+        Ok(_) => Ok((
             StatusCode::CREATED,
             Json(PostTableResponse {
                 id: table.id.clone(),
                 table: table.into(),
             }),
-        ),
-        Err(e) => {
-            todo!()
-        }
+        )),
+        Err(e) => Err(e.to_axum_error()),
     }
 }
 
@@ -90,7 +91,7 @@ pub async fn list_table(
     State(app_state): State<Arc<AppState>>,
     pagination: Query<Pagination>,
     filters: ExtraQuery<ListTableFiltersRequest>,
-) -> impl IntoResponse {
+) -> Result<(StatusCode, Json<ListTableResponse>), (StatusCode, Json<AxumErrorResponse>)> {
     let db = &app_state.db;
     let pagination = Pagination {
         limit: pagination.limit,
@@ -105,7 +106,7 @@ pub async fn list_table(
     };
 
     match db.list_tables(&pagination, filters.clone()).await {
-        Ok(list_result) => (
+        Ok(list_result) => Ok((
             StatusCode::OK,
             Json(ListTableResponse {
                 tables: list_result.tables,
@@ -120,38 +121,38 @@ pub async fn list_table(
                     failed_table_count: list_result.dropped,
                 },
             }),
-        ),
-        Err(e) => todo!(),
+        )),
+        Err(e) => Err(e.to_axum_error()),
     }
 }
 
 pub async fn get_table(
     State(app_state): State<Arc<AppState>>,
     Path(table_id): Path<i64>,
-) -> impl IntoResponse {
+) -> Result<(StatusCode, Json<TableResponse>), (StatusCode, Json<AxumErrorResponse>)> {
     let db = &app_state.db;
     let table_id = table_id;
 
     match db.get_table(table_id).await {
-        Ok(table_result) => (StatusCode::OK, Json(TableResponse::from(table_result))),
-        Err(e) => todo!(),
+        Ok(table_result) => Ok((StatusCode::OK, Json(TableResponse::from(table_result)))),
+        Err(e) => Err(e.to_axum_error()),
     }
 }
 
 pub async fn delete_table(
     State(app_state): State<Arc<AppState>>,
     Path(table_id): Path<i64>,
-) -> impl IntoResponse {
+) -> Result<(StatusCode, Json<DeleteTableResponse>), (StatusCode, Json<AxumErrorResponse>)> {
     let db = &app_state.db;
     let table_id = table_id;
 
     match db.delete_table(table_id).await {
-        Ok(table_response) => (
+        Ok(table_response) => Ok((
             StatusCode::OK,
             Json(DeleteTableResponse {
                 table: table_response,
             }),
-        ),
-        Err(e) => todo!(),
+        )),
+        Err(e) => Err(e.to_axum_error()),
     }
 }

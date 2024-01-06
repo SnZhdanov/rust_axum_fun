@@ -6,6 +6,7 @@ use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use serde_json::Value;
 use std::{error::Error, fs, time::Duration};
 
+#[faux::create]
 #[derive(Clone)]
 pub struct DB {
     pub db: Client,
@@ -19,6 +20,7 @@ pub trait DBTrait {
     async fn set_up_item_records(&self) -> Result<(), Box<dyn Error>>;
 }
 
+#[faux::methods]
 #[async_trait]
 impl DBTrait for DB {
     async fn init() -> Result<Self, Box<dyn Error>> {

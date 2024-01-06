@@ -7,7 +7,7 @@ use tracing::error;
 use crate::common::{
     database,
     database_helpers::collect_cursor,
-    errors::AxumErrors,
+    errors::{AxumErrors, ErrorResponse},
     models::{
         pagination_schema::Pagination,
         restaurant_schema::{Item, ItemResponse},
@@ -28,16 +28,17 @@ pub trait DBTableTrait {
         &self,
         item_names: Vec<String>,
         pagination: &Pagination,
-    ) -> Result<ListItemResults, (StatusCode, AxumErrors)>;
+    ) -> Result<ListItemResults, ErrorResponse>;
 }
 
+#[faux::methods]
 #[async_trait]
 impl DBTableTrait for database::DB {
     async fn list_items(
         &self,
         item_names: Vec<String>,
         pagination: &Pagination,
-    ) -> Result<ListItemResults, (StatusCode, AxumErrors)> {
+    ) -> Result<ListItemResults, ErrorResponse> {
         let item_collection = self
             .db
             .database("item_management")
@@ -70,15 +71,25 @@ impl DBTableTrait for database::DB {
             Ok(count) => count,
             Err(e) => {
                 error!("Unexpected error occured while coutning Items in the Database. Error: {e}");
-                return Err((StatusCode::INTERNAL_SERVER_ERROR, AxumErrors::DBError));
+                return Err(ErrorResponse {
+                    status_code: StatusCode::INTERNAL_SERVER_ERROR,
+                    error: AxumErrors::DBError.into(),
+                });
             }
         };
 
         match item_collection.find(filter, find_options).await {
             Ok(cursor) => {
-                let (items, failed_items, dropped) = collect_cursor::<Item, ItemResponse>(cursor)
-                    .await
-                    .get_results();
+                let (items, failed_items, dropped) =
+                    match collect_cursor::<Item, ItemResponse>(cursor).await {
+                        Ok(collect_cursor_result) => collect_cursor_result.get_results(),
+                        Err(e) => {
+                            return Err(ErrorResponse {
+                                status_code: StatusCode::INTERNAL_SERVER_ERROR,
+                                error: e.into(),
+                            });
+                        }
+                    };
 
                 Ok(ListItemResults {
                     items,
@@ -92,7 +103,10 @@ impl DBTableTrait for database::DB {
             }
             Err(e) => {
                 error!("Unexpected error occured while coutning Items in the Database. Error: {e}");
-                return Err((StatusCode::INTERNAL_SERVER_ERROR, AxumErrors::DBError));
+                Err(ErrorResponse {
+                    status_code: StatusCode::INTERNAL_SERVER_ERROR,
+                    error: AxumErrors::DBError.into(),
+                })
             }
         }
     }

@@ -6,13 +6,13 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     common::{
-        errors::AxumErrors,
+        errors::AxumErrorResponse,
         models::{pagination_schema::Pagination, restaurant_schema::ItemResponse},
     },
     AppState,
 };
 
-use super::item_handler::DBTableTrait;
+use super::item_db::DBTableTrait;
 
 #[derive(Deserialize, Serialize)]
 pub struct ListItemsRequest {
@@ -49,7 +49,7 @@ pub async fn list_items(
     State(app_state): State<Arc<AppState>>,
     pagination: Query<Pagination>,
     Query(filters): Query<ListItemsRequest>,
-) -> Result<(StatusCode, Json<ListItemsResponse>), (StatusCode, Json<AxumErrors>)> {
+) -> Result<(StatusCode, Json<ListItemsResponse>), (StatusCode, Json<AxumErrorResponse>)> {
     let db = &app_state.db;
 
     let pagination = Pagination {
@@ -74,6 +74,6 @@ pub async fn list_items(
                 },
             }),
         )),
-        Err(e) => Err((e.0, Json(e.1))),
+        Err(e) => Err(e.to_axum_error()),
     }
 }
