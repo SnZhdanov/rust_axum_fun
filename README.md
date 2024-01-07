@@ -34,12 +34,20 @@
 ## Set Up
 ```
 git clone git@github.com:SnZhdanov/rust_axum_fun.git
+git checkout develop
 cp .sample_env .env
 
 ```
 export the env variables
 ```
 export $(grep -v '^#' .env | xargs)
+```
+
+## Run the App
+Once the environment is set, docker compose and then cargo run
+```
+docker-compose up -d
+cargo run
 ```
 
 ## Viewing the Database Records
@@ -52,12 +60,7 @@ http://localhost:8081/
 
 ```
 
-## Run the App
-Once the environment is set, docker compose and then cargo run
-```
-docker-compose up -d
-cargo run
-```
+Note: It might take a few seconds(1-5 seconds) after you run docker-compose up for mongo-express to be ready.
 
 ## Unit Tests
 To run unit tests, do the following
@@ -146,7 +149,10 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 29 filtered out; fin
 - Body: {"orders": Vec< String > }
 - Output Format
 ```
-
+{
+    "id": ObjectId,
+    "table": {Table}    
+}
 
 ```
 - Example Curl
@@ -278,38 +284,31 @@ curl -X GET '0.0.0.0:9090/table/3/order/2'
 - Query Params
     - limit: Int
     - offset: Int
-    - table_id: Int 
-        - filter on table_id
-    - order_id: Int
-        - filter on table that have order_id
-    - item_name: String
-        - fuzzy match on given string
+    - table_ids: Vec< Int > 
+        - filters orders with a table_id in the vec
     - item_names: Vec< String >
         - filter on tables that have specified items
+    - cook status: Enum(InProgress/Done)
+        - filter on items depending on their cook status
 - Output Format
 ```
-    "tables":[Tables],
+    "orders":[Order],
     "pagination":{
         "total":Int,
         "limit":Int,
         "offset":Int
     },
     "filters":{
-        "table_id": Int,
-        "order_id": Int,
-        "item_name":Strings,
-        "item_names":[ Strings ]
-    },
-    "errors":{
-        "failed_table_ids":[String],
-        "failed_table_count":Int
+        "table_ids": Vec< Int >,
+        "item_names":[ Strings ],
+        "cook_status": Enum(InProgress/Done)
     }
 ```
 - Example Curl
 ```
-curl -X GET '0.0.0.0:9090/table?item_names=Hotdog&item_names=Borsht&item_name=Borsht&table_id=2&order_id=3&limit=5&offset=0'
+curl -X GET '0.0.0.0:9090/table/order?item_names=Ramen&item_names=Borsht&cook_status=InProgress&limit=5&offset=0'
 
-curl -X GET '0.0.0.0:9090/table?item_name=Borsht&limit=5&offset=0'
+curl -X GET '0.0.0.0:9090/table/order?cook_status=InProgress&limit=5&offset=0'
 
 ```
 
@@ -365,6 +364,7 @@ Again, if this were a real production environment and I were using MongoDB, I wo
 # TODO Check List
 - [x] Mongodb setup
     - [x] containerize mongodb  
+    - [x] containerize mongo-express
 - [] Axum setup
     - [] containerize rust
 - [] Documentation

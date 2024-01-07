@@ -43,7 +43,6 @@ pub trait DBOrderTrait {
     async fn get_item(&self, item_name: String) -> Result<Option<Item>, ErrorResponse>;
     async fn delete_order(&self, table_id: &i64, order_id: &i64) -> Result<Table, ErrorResponse>;
     async fn get_order(&self, table_id: &i64, order_id: &i64) -> Result<Order, ErrorResponse>;
-    async fn list_table_orders(&self, table_id: &i64) -> Result<Vec<OrderResponse>, ErrorResponse>;
     async fn list_all_orders(
         &self,
         filters: &ListOrderFiltersRequest,
@@ -230,38 +229,6 @@ impl DBOrderTrait for database::DB {
             },
             Err(e) => {
                 error!("Unexpected error occured while searching for Order from Table in the Database. Error: {e}");
-                Err(ErrorResponse {
-                    status_code: StatusCode::INTERNAL_SERVER_ERROR,
-                    error: AxumErrors::DBError.into(),
-                })
-            }
-        }
-    }
-    async fn list_table_orders(&self, table_id: &i64) -> Result<Vec<OrderResponse>, ErrorResponse> {
-        let table_collection = self
-            .db
-            .database("table_management")
-            .collection::<Table>("tables");
-
-        //check if the table and the order exist
-        let filter = doc! {
-            "table_id": table_id,
-        };
-
-        match table_collection.find_one(filter, None).await {
-            Ok(opt_table) => match opt_table {
-                Some(table) => Ok(table
-                    .orders
-                    .into_iter()
-                    .map(|order| order.into())
-                    .collect::<Vec<OrderResponse>>()),
-                None => Err(ErrorResponse {
-                    status_code: StatusCode::NOT_FOUND,
-                    error: AxumErrors::NotFound.into(),
-                }),
-            },
-            Err(e) => {
-                error!("Unexpected error occured while listing for Order from Table in the Database. Error: {e}");
                 Err(ErrorResponse {
                     status_code: StatusCode::INTERNAL_SERVER_ERROR,
                     error: AxumErrors::DBError.into(),
