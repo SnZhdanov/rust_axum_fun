@@ -81,7 +81,7 @@ async fn main() {
     let app = item_app.fallback(handler_404).with_state(app_state);
 
     // run our app with hyper, listening globally on port 8080
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:8080")
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:9090")
         .await
         .unwrap();
     axum::serve(listener, app).await.unwrap();
