@@ -1,11 +1,40 @@
-# Required Tools
+# Table Of Contents
+- [Requirements](#requirements)
+- [Initialization and Running](#initialization-and-running)
+    - [Set Up](#set-up)
+    - [Run the App](#run-the-app)
+    - [Unit Tests](#unit-tests)
+    - [Live Simulation Test](#live-simulation-test)
+- [Data Models Format](#data-models-format)
+- [End Points](#end-points)
+    - Table
+        - [Create Table](#create-table)
+        - [Get Table](#get-table)
+        - [List Table](#list-tables)
+        - [Delete Table](#delete-table)
+    - Orders
+        - [Create Order](#create-order)
+        - [Get Order](#get-order)
+        - [List Orders](#list-orders)
+        - [Delete Order](#delete-order)
+    - Item
+- [TODO Check List](#todo-check-list)
+- [Technical Challenges](#technical-challenges)
+- [Notes](#notes)
+
+----------------------
+----------------------
+
+# Requirements
 - mongodb
 - docker
 
-# Initialization Steps
+# Initialization and Running
+## Set Up
 ```
 git clone git@github.com:SnZhdanov/rust_axum_fun.git
 cp .sample_env .env
+
 ```
 fill out the env variables, username and password for the database can be something like admin/password
 
@@ -14,16 +43,100 @@ fill out the env variables, username and password for the database can be someth
 MONGO_INITDB_ROOT_USERNAME=admin
 MONGO_INITDB_ROOT_PASSWORD=password
 ```
+lastly export the env variables
+```
+export $(grep -v '^#' .env | xargs)
+```
+
+## Run the App
 Once the environment is set, docker compose and then cargo run
 ```
-docker-compose up mongo
-cd axum
+docker-compose up mongo -d
 cargo run
 ```
 
-# End Points
+## Unit Tests
+To run unit tests, do the following
+```
+cd restaurant_app
+cargo test handlers::
+```
+expected result
+```
+running 29 tests
+test handlers::item_handler::unit_tests::order_unit_tests::successful_list_items ... ok
+test handlers::item_handler::unit_tests::order_unit_tests::failed_list_items_b_deserialization_error ... ok
+-- snipped --
+```
 
-## Create Table
+## Live Simulation Test
+To test a simulation of multiple servers interacting with the api do the following.
+```
+cd restaurant_app
+cargo run
+```
+then in a different terminal
+```
+cd restaurant_app
+cargo test tests::run_async_test
+```
+It should take 20 seconds since I made it so that a few servers wait for 10 seconds to search for orders that are done.
+expected output
+```
+running 1 test
+test tests::integration_tests::integration_tests::run_async_test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 29 filtered out; finished in 20.18s
+```
+
+
+----------------------
+# Data Models Format
+- Table
+```
+{
+    "table_id": Int,
+    "orders":[
+        Order
+    ]
+}
+```
+- Order
+```
+{
+    "order_id": Int,
+    "table_id": Int,
+    "order_time": DateTime<Utc>,
+    "cook_status": Enum (InProgress/Done),
+    "item": Item
+}
+```
+- Item
+```
+{
+    "item_name": String,
+    "cook_time": Int,
+}
+```
+
+
+----------------------
+# End Points
+- Table
+    - [Create Table](#create-table)
+    - [Get Table](#get-table)
+    - [List Table](#list-tables)
+    - [Delete Table](#delete-table)
+- Orders
+    - [Create Order](#create-order)
+    - [Get Order](#get-order)
+    - [List Orders](#list-orders)
+    - [Delete Order](#delete-order)
+- Item
+    - [List Items](#list-items)
+
+
+## Create-Table
 - POST
 - End Point: `/table`
 - Body: {"orders": Vec< String > }
@@ -45,7 +158,10 @@ curl -H "Content-Type: application/json" -X POST 0.0.0.0:8080/table -d '{"orders
 - Path Param: table id (Int)
 - Output Format
 ```
-
+{
+    "id": ObjectId (the record's index in mongodb),
+    "table": Table
+}
 
 ```
 - Example Curl
@@ -152,14 +268,6 @@ curl -H "Content-Type: application/json" -X POST 0.0.0.0:8080/table/1/order -d '
 ```
 curl -X GET '0.0.0.0:8080/table/3/order/2'
 ```
-
-
-
-
-
-
-
-
 ## List Orders
 - GET
 - End Point: `/table/order`
@@ -201,14 +309,7 @@ curl -X GET '0.0.0.0:8080/table?item_name=Borsht&limit=5&offset=0'
 
 ```
 
-
-
-
-
-
-
-
-## Delete Orders
+## Delete Order
 - DELETE
 - End Point: `/table/:table_id/order/:order_id`
 - Path Param: 
@@ -227,8 +328,23 @@ curl -X GET '0.0.0.0:8080/table?item_name=Borsht&limit=5&offset=0'
 ```
  curl -X DELETE '0.0.0.0:8080/table/1/order/1'
 ```
+## List Items
+- GET
+- End Point: `/item`
+- Output Format
+```
+{
+    "items": [Item]
+}
+```
+- Example Curl
+```
+curl -X GET '0.0.0.0:8080/item'
+```
 
 
+----------------------
+----------------------
 
 # Technical Challenges
 So normally in MongoDB, you have `ObjectIds` which act as a unique ID for database indexing. The problem with `ObjectId` is they look like this `659633cd5d59de8dca135ef5` which is kind of a pain for writing in Curls when this is meant for testing purposes and not an actual production environment. So for the sake of simplifying interacting with the database, I utilized an Arc Mutex to keep track of table ids that just increment from 1..N on creation request. This way instead of writing a curl like this
@@ -244,16 +360,15 @@ Again, if this were a real production environment and I were using MongoDB, I wo
 
 # TODO Check List
 - [x] Mongodb setup
-    - [x] dockerize mongodb  
+    - [x] containerize mongodb  
 - [] Axum setup
-    - [] dockerize axum
-    - [] dockerize rust
+    - [] containerize rust
 - [] Documentation
-    - [] How to run
-    - [] Procedure for running unit tests
-    - [] Procedure for running simulation test
-    - [] All end points
-    - []
+    - [x] How to run
+    - [x] Procedure for running unit tests
+    - [x] Procedure for running simulation test
+    - [x] All end points
+    - [x] Data Format
 - [x] Crud for Tables
     - [x] create
         - [x] idpotent

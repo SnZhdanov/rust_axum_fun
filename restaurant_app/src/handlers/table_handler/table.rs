@@ -80,6 +80,7 @@ pub async fn create_table(
     let db = &app_state.db;
 
     let mut order_added_counter = 0;
+
     let mut orders: Vec<Order> = [].to_vec();
 
     //if items are inside the order, then let's get the item and custom make orders

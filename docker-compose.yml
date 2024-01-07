@@ -17,10 +17,10 @@ services:
     networks:
       - api_networks
 
-  # axum:
+  # app:
   #   build:
   #     context: ./
-  #   container_name: axum
+  #   container_name: app
   #   ports:
   #     - '8080:8080'
   #   networks:
