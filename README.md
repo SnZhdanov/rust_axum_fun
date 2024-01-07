@@ -2,6 +2,7 @@
 - [Requirements](#requirements)
 - [Initialization and Running](#initialization-and-running)
     - [Set Up](#set-up)
+    - [Viewing the Database Records](#viewing-the-database-records)
     - [Run the App](#run-the-app)
     - [Unit Tests](#unit-tests)
     - [Live Simulation Test](#live-simulation-test)
@@ -26,7 +27,7 @@
 ----------------------
 
 # Requirements
-- mongodb
+- rust
 - docker
 
 # Initialization and Running
@@ -36,22 +37,25 @@ git clone git@github.com:SnZhdanov/rust_axum_fun.git
 cp .sample_env .env
 
 ```
-fill out the env variables, username and password for the database can be something like root/example
-
-```
-#/.env
-MONGO_INITDB_ROOT_USERNAME=root
-MONGO_INITDB_ROOT_PASSWORD=example
-```
-lastly export the env variables
+export the env variables
 ```
 export $(grep -v '^#' .env | xargs)
+```
+
+## Viewing the Database Records
+After running docker-compose, the container mongo-express will run.
+Mongo-express is a way to present the mongo database through an http link.
+If you want to look at the databse on a more finer detail follow this link.
+```
+
+http://localhost:8081/
+
 ```
 
 ## Run the App
 Once the environment is set, docker compose and then cargo run
 ```
-docker-compose up mongo -d
+docker-compose up -d
 cargo run
 ```
 
@@ -147,9 +151,9 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 29 filtered out; fin
 ```
 - Example Curl
 ```
-curl -H "Content-Type: application/json" -X POST 0.0.0.0:8080/table -d '{}'
+curl -H "Content-Type: application/json" -X POST 0.0.0.0:9090/table -d '{}'
 
-curl -H "Content-Type: application/json" -X POST 0.0.0.0:8080/table -d '{"orders": ["Ramen", "Borsht"]}'
+curl -H "Content-Type: application/json" -X POST 0.0.0.0:9090/table -d '{"orders": ["Ramen", "Borsht"]}'
 ```
 
 ## Get Table
@@ -166,7 +170,7 @@ curl -H "Content-Type: application/json" -X POST 0.0.0.0:8080/table -d '{"orders
 ```
 - Example Curl
 ```
-curl -X GET '0.0.0.0:8080/table/1'
+curl -X GET '0.0.0.0:9090/table/1'
 ```
 
 ## List Tables
@@ -204,9 +208,9 @@ curl -X GET '0.0.0.0:8080/table/1'
 ```
 - Example Curl
 ```
-curl -X GET '0.0.0.0:8080/table?item_names=Hotdog&item_names=Borsht&item_name=Borsht&table_id=2&order_id=3&limit=5&offset=0'
+curl -X GET '0.0.0.0:9090/table?item_names=Hotdog&item_names=Borsht&item_name=Borsht&table_id=2&order_id=3&limit=5&offset=0'
 
-curl -X GET '0.0.0.0:8080/table?item_name=Borsht&limit=5&offset=0'
+curl -X GET '0.0.0.0:9090/table?item_name=Borsht&limit=5&offset=0'
 
 ```
 ## Delete Table
@@ -226,7 +230,7 @@ curl -X GET '0.0.0.0:8080/table?item_name=Borsht&limit=5&offset=0'
 ```
 - Example Curl
 ```
- curl -X DELETE '0.0.0.0:8080/table/1'
+ curl -X DELETE '0.0.0.0:9090/table/1'
 ```
 
 ## Create Order
@@ -243,7 +247,7 @@ curl -X GET '0.0.0.0:8080/table?item_name=Borsht&limit=5&offset=0'
 ```
 - Example Curl
 ```
-curl -H "Content-Type: application/json" -X POST 0.0.0.0:8080/table/1/order -d '{"orders":["Hotdog", "Borsht"]}'
+curl -H "Content-Type: application/json" -X POST 0.0.0.0:9090/table/1/order -d '{"orders":["Hotdog", "Borsht"]}'
 ```
 ## Get Order
 - GET
@@ -266,7 +270,7 @@ curl -H "Content-Type: application/json" -X POST 0.0.0.0:8080/table/1/order -d '
 ```
 - Example Curl
 ```
-curl -X GET '0.0.0.0:8080/table/3/order/2'
+curl -X GET '0.0.0.0:9090/table/3/order/2'
 ```
 ## List Orders
 - GET
@@ -303,9 +307,9 @@ curl -X GET '0.0.0.0:8080/table/3/order/2'
 ```
 - Example Curl
 ```
-curl -X GET '0.0.0.0:8080/table?item_names=Hotdog&item_names=Borsht&item_name=Borsht&table_id=2&order_id=3&limit=5&offset=0'
+curl -X GET '0.0.0.0:9090/table?item_names=Hotdog&item_names=Borsht&item_name=Borsht&table_id=2&order_id=3&limit=5&offset=0'
 
-curl -X GET '0.0.0.0:8080/table?item_name=Borsht&limit=5&offset=0'
+curl -X GET '0.0.0.0:9090/table?item_name=Borsht&limit=5&offset=0'
 
 ```
 
@@ -326,7 +330,7 @@ curl -X GET '0.0.0.0:8080/table?item_name=Borsht&limit=5&offset=0'
 ```
 - Example Curl
 ```
- curl -X DELETE '0.0.0.0:8080/table/1/order/1'
+ curl -X DELETE '0.0.0.0:9090/table/1/order/1'
 ```
 ## List Items
 - GET
@@ -339,7 +343,7 @@ curl -X GET '0.0.0.0:8080/table?item_name=Borsht&limit=5&offset=0'
 ```
 - Example Curl
 ```
-curl -X GET '0.0.0.0:8080/item'
+curl -X GET '0.0.0.0:9090/item'
 ```
 
 
@@ -349,11 +353,11 @@ curl -X GET '0.0.0.0:8080/item'
 # Technical Challenges
 So normally in MongoDB, you have `ObjectIds` which act as a unique ID for database indexing. The problem with `ObjectId` is they look like this `659633cd5d59de8dca135ef5` which is kind of a pain for writing in Curls when this is meant for testing purposes and not an actual production environment. So for the sake of simplifying interacting with the database, I utilized an Arc Mutex to keep track of table ids that just increment from 1..N on creation request. This way instead of writing a curl like this
 ```
-curl -X GET 0.0.0.0:8080/table/659633cd5d59de8dca135ef5
+curl -X GET 0.0.0.0:9090/table/659633cd5d59de8dca135ef5
 ```
 I can just do this
 ```
-curl -X GET 0.0.0.0:8080/table/1
+curl -X GET 0.0.0.0:9090/table/1
 ```
 Again, if this were a real production environment and I were using MongoDB, I would default to using the `ObjectId` or overwriting the index field instead of some reference counter that resets when you exit the program (which is why I'm not storing the volume to prevent annoying behaviors).
 

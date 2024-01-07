@@ -39,7 +39,7 @@ impl DBTrait for DB {
                     .to_string()
                     .as_str(),
             );
-        println!("connection_string: {:?}", &connection_string);
+            
         match ClientOptions::parse(connection_string).await {
             Ok(mut client_options) => {
                 client_options.app_name = Some("MongoDB Client".to_string());
