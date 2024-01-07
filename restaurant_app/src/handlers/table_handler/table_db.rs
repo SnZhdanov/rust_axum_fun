@@ -11,6 +11,7 @@ use crate::common::database_helpers::collect_cursor;
 use crate::common::errors::AxumErrors;
 use crate::common::errors::ErrorResponse;
 use crate::common::models::pagination_schema::Pagination;
+use crate::common::models::restaurant_schema::Item;
 use crate::common::models::restaurant_schema::{Table, TableResponse};
 use crate::table_handler::table::ListTableFiltersRequest;
 use axum::http::StatusCode;
@@ -96,6 +97,7 @@ pub trait DBTableTrait {
         filters: ListTableFiltersRequest,
     ) -> Result<ListTablesResult, ErrorResponse>;
     async fn delete_table(&self, table_id: i64) -> Result<TableResponse, ErrorResponse>;
+    async fn get_item_table(&self, item_name: String) -> Result<Option<Item>, ErrorResponse>;
 }
 
 #[faux::methods]
@@ -285,6 +287,30 @@ impl DBTableTrait for database::DB {
                     status_code: StatusCode::INTERNAL_SERVER_ERROR,
                     error: AxumErrors::DBError.into(),
                 })
+            }
+        }
+    }
+
+    async fn get_item_table(&self, item_name: String) -> Result<Option<Item>, ErrorResponse> {
+        let item_collection = self
+            .db
+            .database("item_management")
+            .collection::<Item>("items");
+
+        let filter = doc! {
+            "item_name":item_name
+        };
+
+        match item_collection.find_one(filter, None).await {
+            Ok(opt_item) => Ok(opt_item),
+            Err(e) => {
+                error!(
+                    "Unexpected error occured while searching for Item in the Database. Error: {e}"
+                );
+                return Err(ErrorResponse {
+                    status_code: StatusCode::INTERNAL_SERVER_ERROR,
+                    error: AxumErrors::DBError.into(),
+                });
             }
         }
     }

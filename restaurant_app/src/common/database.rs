@@ -81,7 +81,7 @@ impl DBTrait for DB {
             }
         };
 
-        let file = fs::File::open("./axum/src/common/item_records.json")
+        let file = fs::File::open("./restaurant_app/src/common/item_records.json")
             .expect("File for pre-loading the DB not found!");
 
         let json: Value = serde_json::from_reader(file)
