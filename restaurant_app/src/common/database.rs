@@ -39,14 +39,14 @@ impl DBTrait for DB {
                     .to_string()
                     .as_str(),
             );
-
+        println!("connection_string: {:?}", &connection_string);
         match ClientOptions::parse(connection_string).await {
             Ok(mut client_options) => {
                 client_options.app_name = Some("MongoDB Client".to_string());
                 client_options.max_pool_size = Some(10);
                 client_options.min_pool_size = Some(1);
-                client_options.connect_timeout = Some(Duration::from_secs(30));
-                client_options.max_idle_time = Some(Duration::from_secs(120));
+                client_options.connect_timeout = Some(Duration::from_secs(5));
+                client_options.max_idle_time = Some(Duration::from_secs(30));
 
                 Ok(Self {
                     db: Client::with_options(client_options)?,

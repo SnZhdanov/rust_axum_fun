@@ -36,12 +36,12 @@ git clone git@github.com:SnZhdanov/rust_axum_fun.git
 cp .sample_env .env
 
 ```
-fill out the env variables, username and password for the database can be something like admin/password
+fill out the env variables, username and password for the database can be something like root/example
 
 ```
 #/.env
-MONGO_INITDB_ROOT_USERNAME=admin
-MONGO_INITDB_ROOT_PASSWORD=password
+MONGO_INITDB_ROOT_USERNAME=root
+MONGO_INITDB_ROOT_PASSWORD=example
 ```
 lastly export the env variables
 ```
