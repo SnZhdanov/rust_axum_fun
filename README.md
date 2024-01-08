@@ -27,7 +27,7 @@
 ----------------------
 
 # Requirements
-- rust
+- rust 1.75
 - docker
 
 # Initialization and Running
