@@ -81,7 +81,10 @@ impl DBTrait for DB {
             }
         };
 
-        let file = fs::File::open("./restaurant_app/src/common/item_records.json")
+        let file_path: String =
+            std::env::var("FILE_PATH").expect("FILE_PATH env var must be set!");
+
+        let file = fs::File::open(file_path)
             .expect("File for pre-loading the DB not found!");
 
         let json: Value = serde_json::from_reader(file)
