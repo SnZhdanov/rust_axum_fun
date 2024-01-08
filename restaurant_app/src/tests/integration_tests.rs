@@ -26,7 +26,7 @@ pub mod integration_tests {
         let client = reqwest::Client::new();
         let orders = CreateTableOrder { orders };
         let create_call = client
-            .post("http://127.0.0.1:8080/table")
+            .post("http://127.0.0.1:9090/table")
             .header("Content-Type", "application/json")
             .json(&orders)
             .send()
@@ -42,7 +42,7 @@ pub mod integration_tests {
         let client = reqwest::Client::new();
 
         let list_call = client
-            .get("http://127.0.0.1:8080/table/order")
+            .get("http://127.0.0.1:9090/table/order")
             .header("Content-Type", "application/json");
 
         match list_order_query {
@@ -69,7 +69,7 @@ pub mod integration_tests {
         let order = CreateOrdersRequest { orders };
 
         let create_order = client
-            .post(format!("http://127.0.0.1:8080/table/{table_id}/order"))
+            .post(format!("http://127.0.0.1:9090/table/{table_id}/order"))
             .header("Content-Type", "application/json")
             .json(&order)
             .send()
@@ -86,7 +86,7 @@ pub mod integration_tests {
 
         let delete_order = client
             .delete(format!(
-                "http://127.0.0.1:8080/table/{table_id}/order/{order_id}"
+                "http://127.0.0.1:9090/table/{table_id}/order/{order_id}"
             ))
             .header("Content-Type", "application/json")
             .send()
