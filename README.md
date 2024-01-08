@@ -50,6 +50,11 @@ docker-compose up -d
 cargo run
 ```
 
+One the app is running, you can begin to make curl requests on port 9090 like the following:
+```
+curl -H "Content-Type: application/json" -X POST 0.0.0.0:9090/table -d '{}'
+```
+
 ## Viewing the Database Records
 After running docker-compose, the container mongo-express will run.
 Mongo-express is a way to present the mongo database through an http link.
