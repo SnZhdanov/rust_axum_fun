@@ -27,8 +27,10 @@
 ----------------------
 
 # Requirements
-- rust 1.75 (older versions will freak out on the AppState being private, so make sure your rust is up-to-date, which at the time of writing this is 1.75)
+- rust 1.75 
 - docker
+
+(older versions will freak out on the AppState being private, so make sure your rust is up-to-date, which at the time of writing this is 1.75)
 
 # Initialization and Running
 ## Set Up
